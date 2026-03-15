@@ -18,12 +18,14 @@ if (fs.existsSync(configPath)) {
 
 // Initialize Firebase Admin
 try {
-  if (firebaseConfig.projectId) {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId,
-    });
-  } else {
-    admin.initializeApp();
+  if (!admin.apps.length) {
+    if (firebaseConfig.projectId) {
+      admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+    } else {
+      admin.initializeApp();
+    }
   }
   console.log("[Firebase Admin] Initialized successfully");
 } catch (error) {
@@ -116,10 +118,8 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
-async function startServer() {
+async function createServer() {
   const app = express();
-  const PORT = 3000;
-
   app.use(express.json());
 
   // Visitor Tracking Middleware
@@ -134,7 +134,6 @@ async function startServer() {
         const ipStr = Array.isArray(ip) ? ip[0] : ip.toString().split(',')[0].trim();
         const now = new Date();
         
-        // Use Firestore for IP logging
         const ipLogsCol = db.collection('ip_logs');
         const snapshot = await ipLogsCol
           .where('ip_address', '==', ipStr)
@@ -203,16 +202,11 @@ async function startServer() {
   app.post("/api/appointments", async (req, res) => {
     try {
       const appointmentData = req.body;
-      
-      // Save to Firestore
       const docRef = await db.collection('appointments').add({
         ...appointmentData,
         created_at: admin.firestore.FieldValue.serverTimestamp()
       });
-
-      // Send Email
       await sendAppointmentEmail(appointmentData);
-
       res.json({ success: true, id: docRef.id });
     } catch (error: any) {
       console.error("Failed to book appointment:", error);
@@ -221,7 +215,7 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -235,9 +229,20 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  return app;
+}
+
+// For local development
+if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+  createServer().then(app => {
+    app.listen(3000, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:3000`);
+    });
   });
 }
 
-startServer();
+// For Vercel
+export default async (req: any, res: any) => {
+  const app = await createServer();
+  return app(req, res);
+};
