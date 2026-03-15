@@ -1,0 +1,390 @@
+import React, { useState } from 'react';
+import { useLocation, Link, Navigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, User, X, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+const Result: React.FC = () => {
+  const location = useLocation();
+  const [showModal, setShowModal] = useState(false);
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
+  const data = location.state as { answers: any[], contactInfo: any, submissionId?: string | number } | null;
+
+  if (!data) return <Navigate to="/quiz" />;
+
+  const { answers, contactInfo, submissionId } = data;
+
+  // Analysis logic
+  const getScores = () => {
+    const aq = answers.filter(a => a.type === 'AQ');
+    const iq = answers.filter(a => a.type === 'IQ');
+
+    const aqScore = Math.round((aq.filter(a => a.isCorrect).length / aq.length) * 100) || 0;
+    const iqScore = Math.round((iq.filter(a => a.isCorrect).length / iq.length) * 100) || 0;
+
+    return { aqScore, iqScore };
+  };
+
+  const { aqScore, iqScore } = getScores();
+
+  const getAnalysisData = () => {
+    // For the chart, we can show category-wise performance
+    const categories: Record<string, { correct: number, total: number }> = {};
+    
+    answers.forEach(ans => {
+      if (!categories[ans.category]) {
+        categories[ans.category] = { correct: 0, total: 0 };
+      }
+      categories[ans.category].total += 1;
+      if (ans.isCorrect) categories[ans.category].correct += 1;
+    });
+
+    return Object.entries(categories).map(([name, stats]) => ({
+      name,
+      value: Math.round((stats.correct / stats.total) * 100)
+    }));
+  };
+
+  const chartData = getAnalysisData();
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+  // Simple logic to determine recommended paths based on category performance
+  const getRecommendations = () => {
+    const sorted = [...chartData].sort((a, b) => b.value - a.value);
+    const top = sorted[0]?.name;
+    
+    if (top === 'Numerical') return ['Data Science', 'Finance', 'Engineering'];
+    if (top === 'Logical') return ['Software Engineering', 'Research', 'Architecture'];
+    if (top === 'Verbal') return ['Journalism', 'Law', 'Marketing'];
+    if (top === 'Situational') return ['Management', 'Human Resources', 'Public Relations'];
+    return ['General Management', 'Business Administration'];
+  };
+
+  const recommendations = getRecommendations();
+
+  const handleConfirmAppointment = async () => {
+    if (!appointmentTime) {
+      alert("Please select a time for your appointment.");
+      return;
+    }
+    
+    setIsSending(true);
+    try {
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submission_id: submissionId,
+          consultant_name: "Vineet Bansal",
+          appointment_time: appointmentTime,
+          user_name: contactInfo.name,
+          user_email: contactInfo.email,
+          user_phone: contactInfo.phone,
+          aq_score: aqScore,
+          iq_score: iqScore,
+          top_recommendation: recommendations[0]
+        })
+      });
+
+      if (!response.ok) {
+        let errorMessage = "Failed to book appointment";
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errData = await response.json();
+          errorMessage = errData.error || errorMessage;
+        } else {
+          const textError = await response.text();
+          console.error("Server returned non-JSON error:", textError);
+          const isNetlify = window.location.hostname.includes('netlify.app');
+          errorMessage = isNetlify 
+            ? "You are using a static version of the app (Netlify). Please use the official App URL to book appointments."
+            : `Server error (${response.status}). Please ensure you are using the correct App URL and the backend is running.`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      setIsSending(false);
+      setIsSent(true);
+      console.log(`Appointment confirmed and email request sent to ${contactInfo.email}`);
+    } catch (error: any) {
+      console.error("Failed to save appointment:", error);
+      setIsSending(false);
+      alert(error.message || "Failed to book appointment. Please try again.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-20 px-6 transition-colors duration-300">
+      <div className="max-w-5xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-slate-900 p-8 md:p-12 rounded-[40px] shadow-xl border border-slate-100 dark:border-slate-800 mb-12"
+        >
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Trophy className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+            </div>
+            
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 dark:text-white mb-4">
+              Results for {contactInfo.name}
+            </h1>
+            <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
+              We've analyzed your responses. Here's your performance breakdown.
+            </p>
+          </div>
+
+          {/* Scores Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+            <div className="p-8 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl border border-emerald-100 dark:border-emerald-800/50 text-center">
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2 block">Aptitude Quotient (AQ)</span>
+              <div className="text-6xl font-display font-black text-emerald-900 dark:text-emerald-50">{aqScore}%</div>
+              <p className="text-emerald-700 dark:text-emerald-400 mt-2 text-sm">Measures your situational and verbal skills</p>
+            </div>
+            <div className="p-8 bg-amber-50 dark:bg-amber-900/20 rounded-3xl border border-amber-100 dark:border-amber-800/50 text-center">
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2 block">Intelligence Quotient (IQ)</span>
+              <div className="text-6xl font-display font-black text-amber-900 dark:text-amber-50">{iqScore}%</div>
+              <p className="text-amber-700 dark:text-amber-400 mt-2 text-sm">Measures your logical and numerical ability</p>
+            </div>
+          </div>
+
+          {/* Chart Section */}
+          <div className="mb-16">
+            <div className="flex items-center gap-2 mb-8 justify-center">
+              <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-white">Performance by Category</h2>
+            </div>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" opacity={0.1} />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+                    dy={10}
+                  />
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc', opacity: 0.1 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1e293b', color: '#fff' }}
+                  />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-white mb-8">Top Recommended Paths</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {recommendations.map((path, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="p-8 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 group hover:bg-indigo-600 dark:hover:bg-indigo-600 transition-all cursor-default rounded-3xl"
+                >
+                  <Sparkles className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mb-4 group-hover:text-white transition-colors mx-auto" />
+                  <h3 className="text-xl font-display font-bold text-indigo-900 dark:text-indigo-100 group-hover:text-white transition-colors">
+                    {path}
+                  </h3>
+                </motion.div>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setShowModal(true)}
+              className="px-10 py-5 bg-indigo-600 text-white rounded-full font-bold text-lg shadow-lg hover:bg-indigo-700 hover:scale-105 transition-all flex items-center gap-3 mx-auto"
+            >
+              <Calendar className="w-6 h-6" />
+              Book Consultation with Vinit Bansal
+            </button>
+          </div>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Link 
+            to="/graph"
+            className="p-10 bg-slate-900 dark:bg-slate-900 text-white rounded-[40px] shadow-lg hover:shadow-2xl transition-all group flex flex-col justify-between h-full border border-slate-800"
+          >
+            <div>
+              <Map className="w-10 h-10 text-indigo-400 mb-6" />
+              <h2 className="text-3xl font-display font-bold mb-4">Explore the Map</h2>
+              <p className="text-slate-400 leading-relaxed">
+                See how your recommended paths branch out and discover specific specializations.
+              </p>
+            </div>
+            <div className="mt-8 flex items-center gap-2 text-indigo-400 font-bold group-hover:translate-x-2 transition-transform">
+              Go to Career Map <ArrowRight className="w-5 h-5" />
+            </div>
+          </Link>
+
+          <div className="p-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[40px] shadow-sm flex flex-col justify-between h-full">
+            <div>
+              <GraduationCap className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mb-6" />
+              <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white mb-4">University Guide</h2>
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+                We've sent a detailed guide of top universities for your recommended paths to <strong>{contactInfo.email || contactInfo.phone}</strong>.
+              </p>
+            </div>
+            <button 
+              onClick={() => window.print()}
+              className="mt-8 px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+            >
+              Download PDF Guide
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Appointment Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
+            >
+              <div className="p-8 md:p-10">
+                <button 
+                  onClick={() => setShowModal(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-slate-400" />
+                </button>
+
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center">
+                    <User className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white">Appointment Details</h3>
+                    <p className="text-slate-500 dark:text-slate-400">Waqt Career Consultation</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6 mb-10">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <User className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Consultant</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">Vineet Bansal</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <Clock className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Appointment Time</p>
+                      {!isSent ? (
+                        <input 
+                          type="datetime-local" 
+                          value={appointmentTime}
+                          onChange={(e) => setAppointmentTime(e.target.value)}
+                          className="mt-2 w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white"
+                          min={new Date().toISOString().slice(0, 16)}
+                        />
+                      ) : (
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                          {new Date(appointmentTime).toLocaleString('en-IN', {
+                            dateStyle: 'full',
+                            timeStyle: 'short'
+                          })}
+                        </p>
+                      )}
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Online Video Consultation</p>
+                    </div>
+                  </div>
+
+                  {isSent ? (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-3xl border border-emerald-100 dark:border-emerald-800/50 text-center"
+                    >
+                      <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Trophy className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-50 mb-1">Confirmation Sent!</h4>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        An email with the appointment link has been sent to <strong>{contactInfo.email}</strong>.
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border border-indigo-100 dark:border-indigo-800/50">
+                      <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-4">Waqt Result Summary</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-indigo-400 font-bold uppercase">AQ Score</p>
+                          <p className="text-2xl font-display font-black text-indigo-900 dark:text-indigo-50">{aqScore}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-indigo-400 font-bold uppercase">IQ Score</p>
+                          <p className="text-2xl font-display font-black text-indigo-900 dark:text-indigo-50">{iqScore}%</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-indigo-100 dark:border-indigo-800">
+                        <p className="text-xs text-indigo-400 font-bold uppercase">Top Recommendation</p>
+                        <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100">{recommendations[0]}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {!isSent && (
+                  <button 
+                    onClick={handleConfirmAppointment}
+                    disabled={isSending}
+                    className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70"
+                  >
+                    {isSending ? (
+                      <>
+                        <Clock className="w-5 h-5 animate-spin" />
+                        Sending Confirmation...
+                      </>
+                    ) : (
+                      "Confirm & Send Email"
+                    )}
+                  </button>
+                )}
+                
+                {isSent && (
+                  <button 
+                    onClick={() => setShowModal(false)}
+                    className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default Result;

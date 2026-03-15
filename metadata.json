@@ -1,0 +1,5 @@
+{
+  "name": "Career Explorer Graph",
+  "description": "An interactive hierarchical graph for exploring career paths and educational opportunities.",
+  "requestFramePermissions": []
+}
