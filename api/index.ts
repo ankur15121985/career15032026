@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
@@ -17,7 +16,7 @@ try {
     firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     console.log("[Firebase Config] Loaded from file");
   } else {
-    console.warn("[Firebase Config] Config file not found, using environment variables");
+    console.warn("[Firebase Config] Config file not found at", configPath);
     firebaseConfig = {
       projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
       firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID
@@ -27,16 +26,9 @@ try {
   console.error("[Firebase Config] Error loading config:", e);
 }
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin at top level
+let db: admin.firestore.Firestore;
 try {
-  console.log("[Debug] Current working directory:", process.cwd());
-  console.log("[Debug] __dirname:", __dirname);
-  if (fs.existsSync(configPath)) {
-    console.log("[Debug] firebase-applet-config.json exists");
-  } else {
-    console.log("[Debug] firebase-applet-config.json does NOT exist at", configPath);
-  }
-
   if (!admin.apps.length) {
     if (firebaseConfig.projectId) {
       admin.initializeApp({
@@ -48,14 +40,14 @@ try {
       console.log("[Firebase Admin] Initialized with default credentials");
     }
   }
+  
+  // Initialize db after app is ready
+  db = firebaseConfig.firestoreDatabaseId 
+    ? admin.firestore(firebaseConfig.firestoreDatabaseId)
+    : admin.firestore();
 } catch (error) {
   console.error("[Firebase Admin] Initialization error:", error);
 }
-
-// Get Firestore instance with specific database ID if provided
-const db = firebaseConfig.firestoreDatabaseId 
-  ? admin.firestore(firebaseConfig.firestoreDatabaseId)
-  : admin.firestore();
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -138,133 +130,90 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
-async function createServer() {
-  const app = express();
-  app.use(express.json());
+const app = express();
+app.use(express.json());
 
-  // Visitor Tracking Middleware
-  app.use(async (req, res, next) => {
-    if (req.path.includes('.') || req.path.startsWith('/api/admin')) {
-      return next();
-    }
-
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    if (ip) {
-      try {
-        const ipStr = Array.isArray(ip) ? ip[0] : ip.toString().split(',')[0].trim();
-        const now = new Date();
-        
-        const ipLogsCol = db.collection('ip_logs');
-        const snapshot = await ipLogsCol
-          .where('ip_address', '==', ipStr)
-          .orderBy('visited_at', 'desc')
-          .limit(1)
-          .get();
-        
-        let shouldLog = true;
-        if (!snapshot.empty) {
-          const lastLog = snapshot.docs[0].data();
-          const lastVisited = lastLog.visited_at.toDate();
-          if (now.getTime() - lastVisited.getTime() < 3600000) {
-            shouldLog = false;
-          }
-        }
-
-        if (shouldLog) {
-          await ipLogsCol.add({
-            ip_address: ipStr,
-            visited_at: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      } catch (e) {
-        console.error("Failed to log IP to Firestore:", e);
-      }
-    }
-    next();
-  });
-
-  // Health Check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // Visitor Count API
-  app.get("/api/visitor-count", async (req, res) => {
-    try {
-      const snapshot = await db.collection('ip_logs').count().get();
-      res.json({ count: snapshot.data().count });
-    } catch (error) {
-      console.error("Failed to get visitor count:", error);
-      res.status(500).json({ error: "Failed to get visitor count" });
-    }
-  });
-
-  // Email Test API (Debug)
-  app.get("/api/debug/email-test", async (req, res) => {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ error: "Email required" });
-
-    try {
-      await sendAppointmentEmail({
-        user_email: email,
-        user_name: "Test User",
-        consultant_name: "Vineet Bansal",
-        appointment_time: new Date().toISOString(),
-        top_recommendation: "Test Career"
-      });
-      res.json({ success: true, message: "Test email sent" });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Appointment Booking API
-  app.post("/api/appointments", async (req, res) => {
-    try {
-      const appointmentData = req.body;
-      const docRef = await db.collection('appointments').add({
-        ...appointmentData,
-        created_at: admin.firestore.FieldValue.serverTimestamp()
-      });
-      await sendAppointmentEmail(appointmentData);
-      res.json({ success: true, id: docRef.id });
-    } catch (error: any) {
-      console.error("Failed to book appointment:", error);
-      res.status(500).json({ error: "Failed to book appointment" });
-    }
-  });
-
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else if (!process.env.VERCEL) {
-    // Only serve static files if NOT on Vercel (e.g. local production test)
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+// Visitor Tracking Middleware
+app.use(async (req, res, next) => {
+  if (req.path.includes('.') || req.path.startsWith('/api/admin')) {
+    return next();
   }
-  // On Vercel, we don't serve static files from here, Vercel handles it via vercel.json rewrites
 
-  return app;
-}
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  if (ip && db) {
+    try {
+      const ipStr = Array.isArray(ip) ? ip[0] : ip.toString().split(',')[0].trim();
+      const now = new Date();
+      
+      const ipLogsCol = db.collection('ip_logs');
+      const snapshot = await ipLogsCol
+        .where('ip_address', '==', ipStr)
+        .orderBy('visited_at', 'desc')
+        .limit(1)
+        .get();
+      
+      let shouldLog = true;
+      if (!snapshot.empty) {
+        const lastLog = snapshot.docs[0].data();
+        const lastVisited = lastLog.visited_at.toDate();
+        if (now.getTime() - lastVisited.getTime() < 3600000) {
+          shouldLog = false;
+        }
+      }
+
+      if (shouldLog) {
+        await ipLogsCol.add({
+          ip_address: ipStr,
+          visited_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    } catch (e) {
+      console.error("Failed to log IP to Firestore:", e);
+    }
+  }
+  next();
+});
+
+// Health Check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", firebase: !!db });
+});
+
+// Visitor Count API
+app.get("/api/visitor-count", async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not initialized");
+    const snapshot = await db.collection('ip_logs').count().get();
+    res.json({ count: snapshot.data().count });
+  } catch (error: any) {
+    console.error("Failed to get visitor count:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Appointment Booking API
+app.post("/api/appointments", async (req, res) => {
+  try {
+    if (!db) throw new Error("Database not initialized");
+    const appointmentData = req.body;
+    const docRef = await db.collection('appointments').add({
+      ...appointmentData,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+    await sendAppointmentEmail(appointmentData);
+    res.json({ success: true, id: docRef.id });
+  } catch (error: any) {
+    console.error("Failed to book appointment:", error);
+    res.status(500).json({ error: error.message || "Failed to book appointment" });
+  }
+});
 
 // For local development
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-  createServer().then(app => {
-    app.listen(3000, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:3000`);
-    });
+  const PORT = 3000;
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-// For Vercel
-export default async (req: any, res: any) => {
-  const app = await createServer();
-  return app(req, res);
-};
+export default app;

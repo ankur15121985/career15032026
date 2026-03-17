@@ -12,19 +12,22 @@ const BackendWarning: React.FC = () => {
     const hostname = window.location.hostname;
     const origin = window.location.origin;
     
-    // Check if we are on a known static host
-    const isStaticHost = hostname.includes('netlify.app') || hostname.includes('github.io');
+    // Check if we are on a known static host that doesn't support our backend
+    const isNetlify = hostname.includes('netlify.app');
+    const isGithub = hostname.includes('github.io');
     
-    // Check if we are ALREADY on an official URL (to avoid false positives)
-    const isOnOfficial = origin === process.env.APP_URL || origin === process.env.SHARED_APP_URL;
+    // Official domains that ARE allowed
+    const isOfficialDomain = hostname.includes('careersirji.com') || 
+                            hostname.includes('run.app') || 
+                            hostname.includes('vercel.app') ||
+                            hostname === 'localhost';
     
-    if (isStaticHost && !isOnOfficial) {
+    if ((isNetlify || isGithub) && !isOfficialDomain) {
       setIsWrongUrl(true);
       // Auto-redirect after 5 seconds if on Netlify
       const timer = setTimeout(() => {
         const currentPath = window.location.pathname;
         const currentSearch = window.location.search;
-        // Ensure we don't redirect to the same page
         if (!window.location.href.startsWith(OFFICIAL_URL)) {
           window.location.href = `${OFFICIAL_URL}${currentPath}${currentSearch}`;
         }
@@ -41,10 +44,11 @@ const BackendWarning: React.FC = () => {
       .then(data => {
         if (data.status !== 'ok') setIsOffline(true);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn("Backend health check failed:", err);
         setIsOffline(true);
       });
-  }, []);
+  }, [OFFICIAL_URL]);
 
   if (!isVisible || (!isOffline && !isWrongUrl)) return null;
 
@@ -111,7 +115,7 @@ const BackendWarning: React.FC = () => {
               
               <div className="flex flex-col gap-3">
                 <a 
-                  href="https://ais-dev-mhlrlis3atm6intgpw7ttg-356645113135.asia-east1.run.app"
+                  href={OFFICIAL_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 py-3 bg-white text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-50 transition-colors"

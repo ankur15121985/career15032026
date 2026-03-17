@@ -61,6 +61,11 @@ const SidePanel: React.FC<SidePanelProps> = ({ node, onClose }) => {
             </span>
             <h2 className="text-3xl font-display font-bold text-slate-900 dark:text-white mt-1">{node.name}</h2>
             <div className="flex flex-wrap gap-2 mt-3">
+              {node.parent_id && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full text-xs font-bold uppercase tracking-wider">
+                  Stream: {node.parent_id.charAt(0).toUpperCase() + node.parent_id.slice(1).replace('-', ' ')}
+                </div>
+              )}
               {node.duration && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold uppercase tracking-wider">
                   <Clock className="w-3 h-3" /> {node.duration}
@@ -135,7 +140,13 @@ const SidePanel: React.FC<SidePanelProps> = ({ node, onClose }) => {
                       {uni.name}
                     </h4>
                     {uni.ranking && (
-                      <span className="shrink-0 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded uppercase tracking-tighter">
+                      <span className={`shrink-0 px-2 py-1 text-[10px] font-bold rounded uppercase tracking-tighter ${
+                        uni.ranking.toLowerCase().includes('govt') 
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' 
+                          : uni.ranking.toLowerCase().includes('private')
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                          : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                      }`}>
                         {uni.ranking}
                       </span>
                     )}

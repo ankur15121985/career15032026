@@ -202,15 +202,106 @@ export const DEFAULT_CAREERS_FLAT = [
 
 export const DEFAULT_UNIVERSITIES: Record<string, any[]> = {
   'mbbs': [
-    { name: 'AIIMS Delhi', location: 'New Delhi', fees: '₹5,856/year', duration: '5.5 years', ranking: 'NIRF #1', specialization: 'Medicine', website: 'https://www.aiims.edu' },
-    { name: 'CMC Vellore', location: 'Vellore', fees: '₹50,000/year', duration: '5.5 years', ranking: 'NIRF #2', specialization: 'Medicine', website: 'https://www.cmcvellore.ac.in' }
+    { name: 'AIIMS Delhi', location: 'New Delhi, India', fees: '₹5,856/year', duration: '5.5 years', ranking: 'Govt - NIRF #1', specialization: 'Medicine', website: 'https://www.aiims.edu' },
+    { name: 'Maulana Azad Medical College', location: 'New Delhi, India', fees: '₹15,000/year', duration: '5.5 years', ranking: 'Govt - Top Tier', specialization: 'Medicine', website: 'https://www.mamc.ac.in' },
+    { name: 'CMC Vellore', location: 'Vellore, India', fees: '₹50,000/year', duration: '5.5 years', ranking: 'Private - NIRF #3', specialization: 'Medicine', website: 'https://www.cmcvellore.ac.in' },
+    { name: 'Kasturba Medical College', location: 'Manipal, India', fees: '₹17.8 Lakhs/year', duration: '5.5 years', ranking: 'Private - Top Tier', specialization: 'Medicine', website: 'https://manipal.edu' },
+    { name: 'Harvard Medical School', location: 'Boston, USA', fees: '$65,000/year', duration: '4 years (MD)', ranking: 'Global #1', specialization: 'Medicine', website: 'https://hms.harvard.edu' },
+    { name: 'University of Oxford', location: 'Oxford, UK', fees: '£40,000/year', duration: '6 years', ranking: 'Global #2', specialization: 'Medicine', website: 'https://www.ox.ac.uk' }
   ],
   'cse': [
-    { name: 'IIT Bombay', location: 'Mumbai', fees: '₹2,00,000/year', duration: '4 years', ranking: 'NIRF #1', specialization: 'Computer Science', website: 'https://www.iitb.ac.in' },
-    { name: 'IIT Delhi', location: 'New Delhi', fees: '₹2,00,000/year', duration: '4 years', ranking: 'NIRF #2', specialization: 'Computer Science', website: 'https://www.iitd.ac.in' }
+    { name: 'IIT Bombay', location: 'Mumbai, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #1', specialization: 'Computer Science', website: 'https://www.iitb.ac.in' },
+    { name: 'IIT Delhi', location: 'New Delhi, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #2', specialization: 'Computer Science', website: 'https://www.iitd.ac.in' },
+    { name: 'BITS Pilani', location: 'Pilani, India', fees: '₹5,00,000/year', duration: '4 years', ranking: 'Private - Top Tier', specialization: 'Engineering', website: 'https://www.bits-pilani.ac.in' },
+    { name: 'VIT Vellore', location: 'Vellore, India', fees: '₹1,98,000/year', duration: '4 years', ranking: 'Private - NIRF #11', specialization: 'Engineering', website: 'https://vit.ac.in' },
+    { name: 'MIT', location: 'Cambridge, USA', fees: '$58,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Computer Science', website: 'https://www.mit.edu' },
+    { name: 'Stanford University', location: 'Stanford, USA', fees: '$60,000/year', duration: '4 years', ranking: 'Global #2', specialization: 'Computer Science', website: 'https://www.stanford.edu' }
+  ],
+  'bcom-regular': [
+    { name: 'SRCC', location: 'New Delhi, India', fees: '₹30,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Commerce', website: 'https://www.srcc.edu' },
+    { name: 'Hindu College', location: 'New Delhi, India', fees: '₹20,000/year', duration: '3 years', ranking: 'Govt - NIRF #2', specialization: 'Commerce', website: 'https://hinducollege.ac.in' },
+    { name: 'Christ University', location: 'Bangalore, India', fees: '₹85,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Commerce', website: 'https://christuniversity.in' },
+    { name: 'Symbiosis College of Arts & Commerce', location: 'Pune, India', fees: '₹40,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Commerce', website: 'https://symbiosiscollege.edu.in' },
+    { name: 'London School of Economics', location: 'London, UK', fees: '£25,000/year', duration: '3 years', ranking: 'Global #1', specialization: 'Finance/Economics', website: 'https://www.lse.ac.uk' }
+  ],
+  'bba': [
+    { name: 'IIM Indore (IPM)', location: 'Indore, India', fees: '₹5,00,000/year', duration: '5 years (Integrated)', ranking: 'Govt - Top Tier', specialization: 'Management', website: 'https://www.iimidr.ac.in' },
+    { name: 'Shaheed Sukhdev College of Business Studies', location: 'Delhi, India', fees: '₹25,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Management', website: 'https://sscbs.du.ac.in' },
+    { name: 'NMIMS', location: 'Mumbai, India', fees: '₹3,00,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Management', website: 'https://www.nmims.edu' },
+    { name: 'Wharton School (UPenn)', location: 'Philadelphia, USA', fees: '$62,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Business', website: 'https://www.wharton.upenn.edu' },
+    { name: 'INSEAD', location: 'Fontainebleau, France', fees: '€90,000 (Total)', duration: '1 year (MBA)', ranking: 'Global #1', specialization: 'Management', website: 'https://www.insead.edu' },
+    { name: 'HEC Paris', location: 'Jouy-en-Josas, France', fees: '€40,000/year', duration: '3 years (MiM)', ranking: 'Global #1', specialization: 'Business', website: 'https://www.hec.edu' }
+  ],
+  'ba-llb': [
+    { name: 'NLSIU Bangalore', location: 'Bangalore, India', fees: '₹2,50,000/year', duration: '5 years', ranking: 'Govt - NIRF #1', specialization: 'Law', website: 'https://www.nls.ac.in' },
+    { name: 'NALSAR', location: 'Hyderabad, India', fees: '₹2,40,000/year', duration: '5 years', ranking: 'Govt - NIRF #2', specialization: 'Law', website: 'https://www.nalsar.ac.in' },
+    { name: 'Jindal Global Law School', location: 'Sonipat, India', fees: '₹6,00,000/year', duration: '5 years', ranking: 'Private - Top Tier', specialization: 'Law', website: 'https://jgu.edu.in' },
+    { name: 'Yale Law School', location: 'New Haven, USA', fees: '$70,000/year', duration: '3 years (JD)', ranking: 'Global #1', specialization: 'Law', website: 'https://law.yale.edu' },
+    { name: 'University of Sydney', location: 'Sydney, Australia', fees: 'A$45,000/year', duration: '5 years', ranking: 'Global Top 20', specialization: 'Law', website: 'https://www.sydney.edu.au' }
+  ],
+  'b-design': [
+    { name: 'NID Ahmedabad', location: 'Ahmedabad, India', fees: '₹3,50,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Design', website: 'https://www.nid.edu' },
+    { name: 'IIT Bombay (IDC)', location: 'Mumbai, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Design', website: 'http://www.idc.iitb.ac.in' },
+    { name: 'Parsons School of Design', location: 'New York, USA', fees: '$55,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Design', website: 'https://www.newschool.edu/parsons' },
+    { name: 'Royal College of Art', location: 'London, UK', fees: '£30,000/year', duration: '2 years (MA)', ranking: 'Global #1', specialization: 'Design', website: 'https://www.rca.ac.uk' }
   ],
   'ca-root': [
-    { name: 'ICAI', location: 'Pan India', fees: '₹25,000 (Total)', duration: '4-5 years', ranking: 'Professional Body', specialization: 'Accounting', website: 'https://www.icai.org' }
+    { name: 'ICAI', location: 'Pan India', fees: '₹25,000 (Total)', duration: '4-5 years', ranking: 'Professional Body', specialization: 'Accounting', website: 'https://www.icai.org' },
+    { name: 'ACCA', location: 'Global', fees: '£1,500 (Total)', duration: '3-4 years', ranking: 'Global Body', specialization: 'Accounting', website: 'https://www.accaglobal.com' }
+  ],
+  'economics': [
+    { name: 'St. Stephens College', location: 'Delhi, India', fees: '₹40,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Economics', website: 'https://www.ststephens.edu' },
+    { name: 'Delhi School of Economics', location: 'Delhi, India', fees: '₹10,000/year', duration: '2 years (MA)', ranking: 'Govt - Top Tier', specialization: 'Economics', website: 'http://econdse.org' },
+    { name: 'University of Chicago', location: 'Chicago, USA', fees: '$60,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Economics', website: 'https://economics.uchicago.edu' }
+  ],
+  'psychology': [
+    { name: 'TISS', location: 'Mumbai, India', fees: '₹60,000/year', duration: '2 years (MA)', ranking: 'Govt - Top Tier', specialization: 'Psychology', website: 'https://www.tiss.edu' },
+    { name: 'LSR', location: 'Delhi, India', fees: '₹25,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Psychology', website: 'https://lsr.edu.in' },
+    { name: 'Stanford University', location: 'Stanford, USA', fees: '$60,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Psychology', website: 'https://psychology.stanford.edu' }
+  ],
+  'b-arch': [
+    { name: 'IIT Roorkee', location: 'Roorkee, India', fees: '₹2,00,000/year', duration: '5 years', ranking: 'Govt - NIRF #1', specialization: 'Architecture', website: 'https://www.iitr.ac.in' },
+    { name: 'SPA Delhi', location: 'New Delhi, India', fees: '₹50,000/year', duration: '5 years', ranking: 'Govt - NIRF #2', specialization: 'Architecture', website: 'http://spa.ac.in' },
+    { name: 'CEPT University', location: 'Ahmedabad, India', fees: '₹3,20,000/year', duration: '5 years', ranking: 'Private - Top Tier', specialization: 'Architecture', website: 'https://cept.ac.in' },
+    { name: 'Architectural Association (AA)', location: 'London, UK', fees: '£22,000/year', duration: '5 years', ranking: 'Global #1', specialization: 'Architecture', website: 'https://www.aaschool.ac.uk' }
+  ],
+  'b-pharma': [
+    { name: 'NIPER Mohali', location: 'Mohali, India', fees: '₹80,000/year', duration: '2 years (M.Pharm)', ranking: 'Govt - NIRF #1', specialization: 'Pharmacy', website: 'https://www.niper.gov.in' },
+    { name: 'Jamia Hamdard', location: 'New Delhi, India', fees: '₹1,50,000/year', duration: '4 years', ranking: 'Govt - NIRF #2', specialization: 'Pharmacy', website: 'http://www.jamiahamdard.ac.in' },
+    { name: 'ICT Mumbai', location: 'Mumbai, India', fees: '₹85,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Pharmacy', website: 'https://www.ictmumbai.edu.in' }
+  ],
+  'bsc-nursing': [
+    { name: 'AIIMS Delhi', location: 'New Delhi, India', fees: '₹1,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Nursing', website: 'https://www.aiims.edu' },
+    { name: 'RAK College of Nursing', location: 'Delhi, India', fees: '₹15,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Nursing', website: 'http://rakcon.com' }
+  ],
+  'fine-arts': [
+    { name: 'Faculty of Fine Arts, MSU', location: 'Baroda, India', fees: '₹10,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Fine Arts', website: 'https://www.msubaroda.ac.in' },
+    { name: 'College of Art', location: 'Delhi, India', fees: '₹15,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Fine Arts', website: 'http://colart.delhigovt.nic.in' }
+  ],
+  'hotel-mgmt': [
+    { name: 'IHM Pusa', location: 'New Delhi, India', fees: '₹1,20,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Hotel Management', website: 'http://ihmpusa.net' },
+    { name: 'Welcomgroup Graduate School (WGSHA)', location: 'Manipal, India', fees: '₹3,50,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Hotel Management', website: 'https://manipal.edu/wgsha.html' },
+    { name: 'EHL Hospitality Business School', location: 'Lausanne, Switzerland', fees: 'CHF 35,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Hospitality', website: 'https://www.ehl.edu' }
+  ],
+  'journalism': [
+    { name: 'IIMC Delhi', location: 'New Delhi, India', fees: '₹95,000/year', duration: '1 year (PGD)', ranking: 'Govt - Top Tier', specialization: 'Journalism', website: 'http://iimc.nic.in' },
+    { name: 'AJK MCRC, Jamia', location: 'New Delhi, India', fees: '₹80,000/year', duration: '2 years (MA)', ranking: 'Govt - Top Tier', specialization: 'Mass Comm', website: 'https://www.jmi.ac.in' },
+    { name: 'Asian College of Journalism (ACJ)', location: 'Chennai, India', fees: '₹4,60,000/year', duration: '1 year', ranking: 'Private - Top Tier', specialization: 'Journalism', website: 'https://www.asianmedia.org' },
+    { name: 'Columbia Journalism School', location: 'New York, USA', fees: '$70,000/year', duration: '1 year (MS)', ranking: 'Global #1', specialization: 'Journalism', website: 'https://journalism.columbia.edu' }
+  ],
+  'bsc-agri': [
+    { name: 'IARI Delhi', location: 'New Delhi, India', fees: '₹10,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Agriculture', website: 'https://www.iari.res.in' },
+    { name: 'GBPUAT Pantnagar', location: 'Pantnagar, India', fees: '₹40,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Agriculture', website: 'https://www.gbpuat.ac.in' },
+    { name: 'Cornell CALS', location: 'Ithaca, USA', fees: '$40,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Agriculture', website: 'https://cals.cornell.edu' }
+  ],
+  'bca': [
+    { name: 'Christ University', location: 'Bangalore, India', fees: '₹1,20,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Computer Applications', website: 'https://christuniversity.in' },
+    { name: 'Symbiosis Institute of Computer Studies', location: 'Pune, India', fees: '₹1,50,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Computer Applications', website: 'https://www.sicsr.ac.in' },
+    { name: 'Loyola College', location: 'Chennai, India', fees: '₹50,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Computer Applications', website: 'https://www.loyolacollege.edu' }
+  ],
+  'advertising': [
+    { name: 'MICA Ahmedabad', location: 'Ahmedabad, India', fees: '₹21 Lakhs (Total)', duration: '2 years (PGDM)', ranking: 'Private - Top Tier', specialization: 'Advertising/Marketing', website: 'https://www.mica.ac.in' },
+    { name: 'XIC Mumbai', location: 'Mumbai, India', fees: '₹2,50,000/year', duration: '1 year', ranking: 'Private - Top Tier', specialization: 'Advertising', website: 'https://www.xaviercomm.org' }
   ]
 };
 
