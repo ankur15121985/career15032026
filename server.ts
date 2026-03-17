@@ -12,22 +12,42 @@ const __dirname = path.dirname(__filename);
 // Load Firebase Config
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
 let firebaseConfig: any = {};
-if (fs.existsSync(configPath)) {
-  firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+try {
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    console.log("[Firebase Config] Loaded from file");
+  } else {
+    console.warn("[Firebase Config] Config file not found, using environment variables");
+    firebaseConfig = {
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
+      firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID
+    };
+  }
+} catch (e) {
+  console.error("[Firebase Config] Error loading config:", e);
 }
 
 // Initialize Firebase Admin
 try {
+  console.log("[Debug] Current working directory:", process.cwd());
+  console.log("[Debug] __dirname:", __dirname);
+  if (fs.existsSync(configPath)) {
+    console.log("[Debug] firebase-applet-config.json exists");
+  } else {
+    console.log("[Debug] firebase-applet-config.json does NOT exist at", configPath);
+  }
+
   if (!admin.apps.length) {
     if (firebaseConfig.projectId) {
       admin.initializeApp({
         projectId: firebaseConfig.projectId,
       });
+      console.log("[Firebase Admin] Initialized with Project ID:", firebaseConfig.projectId);
     } else {
       admin.initializeApp();
+      console.log("[Firebase Admin] Initialized with default credentials");
     }
   }
-  console.log("[Firebase Admin] Initialized successfully");
 } catch (error) {
   console.error("[Firebase Admin] Initialization error:", error);
 }
@@ -221,13 +241,15 @@ async function createServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
+    // Only serve static files if NOT on Vercel (e.g. local production test)
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+  // On Vercel, we don't serve static files from here, Vercel handles it via vercel.json rewrites
 
   return app;
 }
