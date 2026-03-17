@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CareerNode, University } from '../types';
 import { motion } from 'motion/react';
 import { X, GraduationCap, Clock, DollarSign, MapPin, Info, Loader2, ExternalLink } from 'lucide-react';
-import { DEFAULT_UNIVERSITIES } from '../data/defaultCareers';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { useFirebase } from '../context/FirebaseContext';
+import { COLLEGES } from '../data/colleges';
 
 interface SidePanelProps {
   node: CareerNode | null;
@@ -12,36 +10,18 @@ interface SidePanelProps {
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({ node, onClose }) => {
-  const { db } = useFirebase();
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (node?.id) {
-      const fetchColleges = async () => {
-        setLoading(true);
-        try {
-          const q = query(collection(db, 'colleges'), where('career_id', '==', node.id));
-          const querySnapshot = await getDocs(q);
-          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any;
-          
-          if (data && data.length > 0) {
-            setUniversities(data);
-          } else {
-            // Fallback to default data if Firestore returns empty
-            setUniversities(DEFAULT_UNIVERSITIES[node.id] || []);
-          }
-        } catch (err) {
-          console.error('Failed to fetch colleges from Firestore, using fallback', err);
-          // Fallback to default data if Firestore fails
-          setUniversities(DEFAULT_UNIVERSITIES[node.id] || []);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchColleges();
+      setLoading(true);
+      // Filter local colleges by career_id
+      const filtered = COLLEGES.filter(c => c.career_id === node.id) as any;
+      setUniversities(filtered);
+      setLoading(false);
     }
-  }, [node?.id, db]);
+  }, [node?.id]);
 
   if (!node) return null;
 

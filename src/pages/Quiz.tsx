@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
-import { DEFAULT_QUESTIONS, Question } from '../data/defaultQuestions';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirebase } from '../context/FirebaseContext';
+import { QUESTIONS, Question } from '../data/questions';
 
 const Quiz: React.FC = () => {
-  const { db } = useFirebase();
   const navigate = useNavigate();
   const [step, setStep] = useState<'contact' | 'quiz'>('contact');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -19,18 +16,14 @@ const Quiz: React.FC = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const querySnapshot = await getDocs(collection(db, 'questions'));
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any;
-      
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("No questions received from Firestore");
-      }
-      setQuestions(data);
+      // Pick 20 random questions from the 1000+ available
+      const shuffled = [...QUESTIONS].sort(() => 0.5 - Math.random());
+      const selected = shuffled.slice(0, 20);
+      setQuestions(selected);
       setStep('quiz');
     } catch (err) {
-      console.error("Failed to fetch questions from Firestore, using fallback data", err);
-      // Use fallback data if Firestore is unavailable or empty
-      setQuestions(DEFAULT_QUESTIONS);
+      console.error("Failed to fetch questions", err);
+      setQuestions(QUESTIONS.slice(0, 20));
       setStep('quiz');
     } finally {
       setLoading(false);
@@ -62,23 +55,8 @@ const Quiz: React.FC = () => {
       setAnswers(newAnswers);
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // Save to Firestore
-      let submissionId = null;
-      try {
-        const docRef = await addDoc(collection(db, 'quiz_submissions'), {
-          name: contactInfo.name,
-          email: contactInfo.email,
-          phone: contactInfo.phone,
-          answers: newAnswers,
-          created_at: serverTimestamp()
-        });
-        submissionId = docRef.id;
-      } catch (error) {
-        console.error("Failed to save submission to Firestore:", error);
-      }
-      
       // Navigate to results with answers
-      navigate('/result', { state: { answers: newAnswers, contactInfo, submissionId } });
+      navigate('/result', { state: { answers: newAnswers, contactInfo } });
     }
   };
 

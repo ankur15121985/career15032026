@@ -13,25 +13,22 @@ import GraphPage from './pages/GraphPage';
 import AdminPage from './pages/AdminPage';
 import ThemeSwitcher from './components/ThemeSwitcher';
 import BackendWarning from './components/BackendWarning';
-import { FirebaseProvider } from './context/FirebaseContext';
 
 export default function App() {
   return (
-    <FirebaseProvider>
-      <BrowserRouter>
-        <ThemeSwitcher />
-        <BackendWarning />
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="graph" element={<GraphPage />} />
-            <Route path="career-map" element={<Navigate to="/graph" replace />} />
-            <Route path="quiz" element={<Quiz />} />
-            <Route path="result" element={<Result />} />
-            <Route path="admin" element={<AdminPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </FirebaseProvider>
+    <BrowserRouter>
+      <ThemeSwitcher />
+      <BackendWarning />
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="graph" element={<GraphPage />} />
+          <Route path="career-map" element={<Navigate to="/graph" replace />} />
+          <Route path="quiz" element={<Quiz />} />
+          <Route path="result" element={<Result />} />
+          <Route path="admin" element={<AdminPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   );
 }

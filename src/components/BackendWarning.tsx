@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const BackendWarning: React.FC = () => {
   const [isOffline, setIsOffline] = useState(false);
-  const [isFirebaseOffline, setIsFirebaseOffline] = useState(false);
   const [isWrongUrl, setIsWrongUrl] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const OFFICIAL_URL = process.env.SHARED_APP_URL || process.env.APP_URL || "https://ais-dev-mhlrlis3atm6intgpw7ttg-356645113135.asia-east1.run.app";
@@ -45,8 +44,6 @@ const BackendWarning: React.FC = () => {
       .then(data => {
         if (data.status !== 'ok') {
           setIsOffline(true);
-        } else if (!data.firebase) {
-          setIsFirebaseOffline(true);
         }
       })
       .catch((err) => {
@@ -55,7 +52,7 @@ const BackendWarning: React.FC = () => {
       });
   }, [OFFICIAL_URL]);
 
-  if (!isVisible || (!isOffline && !isWrongUrl && !isFirebaseOffline)) return null;
+  if (!isVisible || (!isOffline && !isWrongUrl)) return null;
 
   // If on Netlify, show a full-screen blocking overlay
   if (isWrongUrl) {
@@ -115,8 +112,6 @@ const BackendWarning: React.FC = () => {
               <p className="text-sm text-rose-100 leading-relaxed mb-4">
                 {isWrongUrl 
                   ? "You are using a static version of the app (Netlify). Features like Quiz, Email, and Admin will NOT work here."
-                  : isFirebaseOffline
-                  ? "The backend is connected, but the database is not initialized. Please check your Firebase configuration."
                   : "The backend server is currently unreachable. Some features may be disabled."}
               </p>
               

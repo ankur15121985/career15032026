@@ -10,11 +10,11 @@ const Result: React.FC = () => {
   const [appointmentTime, setAppointmentTime] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
-  const data = location.state as { answers: any[], contactInfo: any, submissionId?: string | number } | null;
+  const data = location.state as { answers: any[], contactInfo: any } | null;
 
   if (!data) return <Navigate to="/quiz" />;
 
-  const { answers, contactInfo, submissionId } = data;
+  const { answers, contactInfo } = data;
 
   // Analysis logic
   const getScores = () => {
@@ -76,7 +76,6 @@ const Result: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          submission_id: submissionId,
           consultant_name: "Vineet Bansal",
           appointment_time: appointmentTime,
           user_name: contactInfo.name,

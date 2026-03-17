@@ -3,16 +3,14 @@ import Graph from '../components/Graph';
 import SidePanel from '../components/SidePanel';
 import { CareerNode } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
-import { DEFAULT_CAREERS_FLAT, buildTree } from '../data/defaultCareers';
+import { buildTree } from '../data/defaultCareers';
 import { Filter, Search, Clock, GraduationCap, X } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
-import { useFirebase } from '../context/FirebaseContext';
+import { CAREERS } from '../data/careers';
 
 const GraphPage: React.FC = () => {
-  const { db } = useFirebase();
   const [selectedNode, setSelectedNode] = useState<CareerNode | null>(null);
-  const [flatCareers, setFlatCareers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [flatCareers, setFlatCareers] = useState<any[]>(CAREERS);
+  const [loading, setLoading] = useState(false);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,28 +23,6 @@ const GraphPage: React.FC = () => {
     // Reset field when stream changes
     setSelectedField('all');
   }, [selectedStream]);
-
-  useEffect(() => {
-    const fetchCareers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'careers'));
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        if (data && data.length > 0) {
-          setFlatCareers(data);
-        } else {
-          setFlatCareers(DEFAULT_CAREERS_FLAT);
-        }
-      } catch (err) {
-        console.error('Failed to fetch careers from Firestore, using fallback data', err);
-        setFlatCareers(DEFAULT_CAREERS_FLAT);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchCareers();
-  }, [db]);
 
   const filteredTree = useMemo(() => {
     if (!flatCareers.length) return null;
