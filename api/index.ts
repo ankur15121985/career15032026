@@ -4,50 +4,101 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
 import fs from "fs";
+import { createServer as createViteServer } from "vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load Firebase Config
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+const altConfigPath = path.join(__dirname, "..", "firebase-applet-config.json");
 let firebaseConfig: any = {};
-try {
-  if (fs.existsSync(configPath)) {
-    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    console.log("[Firebase Config] Loaded from file");
-  } else {
-    console.warn("[Firebase Config] Config file not found at", configPath);
-    firebaseConfig = {
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
-      firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID
-    };
+
+const loadConfig = () => {
+  console.log("[Debug] Current CWD:", process.cwd());
+  console.log("[Debug] Current __dirname:", __dirname);
+  try {
+    if (fs.existsSync(configPath)) {
+      firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      console.log("[Firebase Config] Loaded from process.cwd()");
+    } else if (fs.existsSync(altConfigPath)) {
+      firebaseConfig = JSON.parse(fs.readFileSync(altConfigPath, "utf-8"));
+      console.log("[Firebase Config] Loaded from __dirname/..");
+    } else {
+      console.warn("[Firebase Config] Config file not found. Trying environment variables.");
+      firebaseConfig = {
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
+        firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID
+      };
+    }
+    console.log("[Firebase Config] Project ID:", firebaseConfig.projectId);
+    console.log("[Firebase Config] Database ID:", firebaseConfig.firestoreDatabaseId);
+    console.log("[Firebase Config] Keys found:", Object.keys(firebaseConfig).join(", "));
+  } catch (e: any) {
+    console.error("[Firebase Config] Error loading config:", e.message);
   }
-} catch (e) {
-  console.error("[Firebase Config] Error loading config:", e);
-}
+};
+
+loadConfig();
 
 // Initialize Firebase Admin at top level
-let db: admin.firestore.Firestore;
-try {
-  if (!admin.apps.length) {
-    if (firebaseConfig.projectId) {
-      admin.initializeApp({
-        projectId: firebaseConfig.projectId,
-      });
-      console.log("[Firebase Admin] Initialized with Project ID:", firebaseConfig.projectId);
-    } else {
-      admin.initializeApp();
-      console.log("[Firebase Admin] Initialized with default credentials");
+let db: admin.firestore.Firestore | null = null;
+
+const initFirebase = () => {
+  try {
+    if (!admin.apps.length) {
+      if (firebaseConfig.projectId) {
+        admin.initializeApp({
+          projectId: firebaseConfig.projectId,
+        });
+        console.log("[Firebase Admin] Initialized with Project ID:", firebaseConfig.projectId);
+      } else {
+        admin.initializeApp();
+        console.log("[Firebase Admin] Initialized with default credentials");
+      }
     }
+    
+    console.log("[Firebase Admin] Active apps:", admin.apps.length);
+    
+    // Initialize db
+    try {
+      if (firebaseConfig.firestoreDatabaseId) {
+        console.log("[Firebase Admin] Attempting to use named database:", firebaseConfig.firestoreDatabaseId);
+        db = admin.firestore(firebaseConfig.firestoreDatabaseId);
+      } else {
+        console.log("[Firebase Admin] Using default database");
+        db = admin.firestore();
+      }
+    } catch (dbErr: any) {
+      console.error("[Firebase Admin] Failed to initialize named database, falling back to default:", dbErr.message);
+      db = admin.firestore();
+    }
+    
+    if (db) {
+      // Test connection
+      db.collection('health').limit(1).get()
+        .then(() => console.log("[Firebase Admin] Firestore connection test successful"))
+        .catch(err => console.error("[Firebase Admin] Firestore connection test failed:", err.message));
+    }
+
+  } catch (error: any) {
+    console.error("[Firebase Admin] Initialization error:", error.message);
+    // Final fallback
+    try {
+      if (!db) db = admin.firestore();
+    } catch (e) {}
   }
-  
-  // Initialize db after app is ready
-  db = firebaseConfig.firestoreDatabaseId 
-    ? admin.firestore(firebaseConfig.firestoreDatabaseId)
-    : admin.firestore();
-} catch (error) {
-  console.error("[Firebase Admin] Initialization error:", error);
-}
+};
+
+initFirebase();
+
+const getDb = () => {
+  if (!db) {
+    console.log("[Firebase Admin] DB is null, re-initializing...");
+    initFirebase();
+  }
+  return db;
+};
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -130,90 +181,131 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
-const app = express();
-app.use(express.json());
+async function createServer() {
+  const app = express();
+  app.use(express.json());
 
-// Visitor Tracking Middleware
-app.use(async (req, res, next) => {
-  if (req.path.includes('.') || req.path.startsWith('/api/admin')) {
-    return next();
-  }
-
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  if (ip && db) {
-    try {
-      const ipStr = Array.isArray(ip) ? ip[0] : ip.toString().split(',')[0].trim();
-      const now = new Date();
-      
-      const ipLogsCol = db.collection('ip_logs');
-      const snapshot = await ipLogsCol
-        .where('ip_address', '==', ipStr)
-        .orderBy('visited_at', 'desc')
-        .limit(1)
-        .get();
-      
-      let shouldLog = true;
-      if (!snapshot.empty) {
-        const lastLog = snapshot.docs[0].data();
-        const lastVisited = lastLog.visited_at.toDate();
-        if (now.getTime() - lastVisited.getTime() < 3600000) {
-          shouldLog = false;
-        }
-      }
-
-      if (shouldLog) {
-        await ipLogsCol.add({
-          ip_address: ipStr,
-          visited_at: admin.firestore.FieldValue.serverTimestamp()
-        });
-      }
-    } catch (e) {
-      console.error("Failed to log IP to Firestore:", e);
+  // Visitor Tracking Middleware
+  app.use(async (req, res, next) => {
+    if (req.path.includes('.') || req.path.startsWith('/api/admin')) {
+      return next();
     }
-  }
-  next();
-});
 
-// Health Check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", firebase: !!db });
-});
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const currentDb = getDb();
+    if (ip && currentDb) {
+      try {
+        const ipStr = Array.isArray(ip) ? ip[0] : ip.toString().split(',')[0].trim();
+        const now = new Date();
+        
+        const ipLogsCol = currentDb.collection('ip_logs');
+        const snapshot = await ipLogsCol
+          .where('ip_address', '==', ipStr)
+          .orderBy('visited_at', 'desc')
+          .limit(1)
+          .get();
+        
+        let shouldLog = true;
+        if (!snapshot.empty) {
+          const lastLog = snapshot.docs[0].data();
+          const lastVisited = lastLog.visited_at.toDate();
+          if (now.getTime() - lastVisited.getTime() < 3600000) {
+            shouldLog = false;
+          }
+        }
 
-// Visitor Count API
-app.get("/api/visitor-count", async (req, res) => {
-  try {
-    if (!db) throw new Error("Database not initialized");
-    const snapshot = await db.collection('ip_logs').count().get();
-    res.json({ count: snapshot.data().count });
-  } catch (error: any) {
-    console.error("Failed to get visitor count:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
+        if (shouldLog) {
+          await ipLogsCol.add({
+            ip_address: ipStr,
+            visited_at: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
+      } catch (e) {
+        console.error("Failed to log IP to Firestore:", e);
+      }
+    }
+    next();
+  });
 
-// Appointment Booking API
-app.post("/api/appointments", async (req, res) => {
-  try {
-    if (!db) throw new Error("Database not initialized");
-    const appointmentData = req.body;
-    const docRef = await db.collection('appointments').add({
-      ...appointmentData,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
+  // Health Check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", firebase: !!getDb() });
+  });
+
+  // Visitor Count API
+  app.get("/api/visitor-count", async (req, res) => {
+    try {
+      const currentDb = getDb();
+      if (!currentDb) throw new Error("Database not initialized");
+      
+      let count = 0;
+      try {
+        const snapshot = await currentDb.collection('ip_logs').count().get();
+        count = snapshot.data().count;
+      } catch (countErr: any) {
+        console.warn("[API] count() failed, falling back to size:", countErr.message);
+        // Fallback to getting all docs (only if collection is small, but it's a safe fallback for now)
+        const snapshot = await currentDb.collection('ip_logs').limit(1000).get();
+        count = snapshot.size;
+      }
+      
+      res.json({ count });
+    } catch (error: any) {
+      console.error("Failed to get visitor count:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Appointment Booking API
+  app.post("/api/appointments", async (req, res) => {
+    try {
+      console.log("[API] Booking appointment request received");
+      const currentDb = getDb();
+      if (!currentDb) {
+        console.error("[API] Database not initialized");
+        throw new Error("Database not initialized");
+      }
+      const appointmentData = req.body;
+      console.log("[API] Saving appointment to Firestore...");
+      const docRef = await currentDb.collection('appointments').add({
+        ...appointmentData,
+        created_at: admin.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("[API] Appointment saved with ID:", docRef.id);
+      
+      console.log("[API] Attempting to send email...");
+      await sendAppointmentEmail(appointmentData);
+      
+      res.json({ success: true, id: docRef.id });
+    } catch (error: any) {
+      console.error("[API] Failed to book appointment:", error);
+      res.status(500).json({ error: error.message || "Failed to book appointment" });
+    }
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
     });
-    await sendAppointmentEmail(appointmentData);
-    res.json({ success: true, id: docRef.id });
-  } catch (error: any) {
-    console.error("Failed to book appointment:", error);
-    res.status(500).json({ error: error.message || "Failed to book appointment" });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
-});
 
-// For local development
-if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   const PORT = 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  return app;
 }
 
-export default app;
+const serverPromise = createServer();
+
+export default serverPromise;
