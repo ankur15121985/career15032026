@@ -65,20 +65,25 @@ const initFirebase = () => {
       if (firebaseConfig.firestoreDatabaseId) {
         console.log("[Firebase Admin] Attempting to use named database:", firebaseConfig.firestoreDatabaseId);
         db = admin.firestore(firebaseConfig.firestoreDatabaseId);
+        
+        // Immediate test for named database
+        db.collection('health').limit(1).get()
+          .then(() => console.log("[Firebase Admin] Named database connection successful"))
+          .catch(err => {
+            if (err.message.includes('NOT_FOUND') || err.code === 5) {
+              console.warn("[Firebase Admin] Named database NOT_FOUND. Falling back to default database.");
+              db = admin.firestore();
+            } else {
+              console.error("[Firebase Admin] Firestore connection test failed:", err.message);
+            }
+          });
       } else {
         console.log("[Firebase Admin] Using default database");
         db = admin.firestore();
       }
     } catch (dbErr: any) {
-      console.error("[Firebase Admin] Failed to initialize named database, falling back to default:", dbErr.message);
+      console.error("[Firebase Admin] Failed to initialize database:", dbErr.message);
       db = admin.firestore();
-    }
-    
-    if (db) {
-      // Test connection
-      db.collection('health').limit(1).get()
-        .then(() => console.log("[Firebase Admin] Firestore connection test successful"))
-        .catch(err => console.error("[Firebase Admin] Firestore connection test failed:", err.message));
     }
 
   } catch (error: any) {
@@ -97,6 +102,13 @@ const getDb = () => {
     console.log("[Firebase Admin] DB is null, re-initializing...");
     initFirebase();
   }
+  return db;
+};
+
+// Helper to reset DB if we hit a persistent NOT_FOUND
+const resetDbToDefault = () => {
+  console.warn("[Firebase Admin] Resetting DB to default due to persistent errors");
+  db = admin.firestore();
   return db;
 };
 
@@ -220,8 +232,11 @@ async function createServer() {
             visited_at: admin.firestore.FieldValue.serverTimestamp()
           });
         }
-      } catch (e) {
-        console.error("Failed to log IP to Firestore:", e);
+      } catch (e: any) {
+        console.error("Failed to log IP to Firestore:", e.message);
+        if (e.message.includes('NOT_FOUND') || e.code === 5) {
+          resetDbToDefault();
+        }
       }
     }
     next();
@@ -243,10 +258,16 @@ async function createServer() {
         const snapshot = await currentDb.collection('ip_logs').count().get();
         count = snapshot.data().count;
       } catch (countErr: any) {
-        console.warn("[API] count() failed, falling back to size:", countErr.message);
-        // Fallback to getting all docs (only if collection is small, but it's a safe fallback for now)
-        const snapshot = await currentDb.collection('ip_logs').limit(1000).get();
-        count = snapshot.size;
+        console.warn("[API] count() failed:", countErr.message);
+        if (countErr.message.includes('NOT_FOUND') || countErr.code === 5) {
+          const fallbackDb = resetDbToDefault();
+          const snapshot = await fallbackDb.collection('ip_logs').limit(1000).get();
+          count = snapshot.size;
+        } else {
+          // Fallback to getting all docs (only if collection is small, but it's a safe fallback for now)
+          const snapshot = await currentDb.collection('ip_logs').limit(1000).get();
+          count = snapshot.size;
+        }
       }
       
       res.json({ count });
@@ -278,7 +299,10 @@ async function createServer() {
       
       res.json({ success: true, id: docRef.id });
     } catch (error: any) {
-      console.error("[API] Failed to book appointment:", error);
+      console.error("[API] Failed to book appointment:", error.message);
+      if (error.message.includes('NOT_FOUND') || error.code === 5) {
+        resetDbToDefault();
+      }
       res.status(500).json({ error: error.message || "Failed to book appointment" });
     }
   });
