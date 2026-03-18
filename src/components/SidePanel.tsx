@@ -16,12 +16,14 @@ const SidePanel: React.FC<SidePanelProps> = ({ node, onClose }) => {
   useEffect(() => {
     if (node?.id) {
       setLoading(true);
-      // Filter local colleges by career_id
-      const filtered = COLLEGES.filter(c => c.career_id === node.id) as any;
-      setUniversities(filtered);
+      // Combine universities from node and COLLEGES
+      const nodeUnis = node.universities || [];
+      const collegeUnis = COLLEGES.filter(c => c.career_id === node.id) as any;
+      
+      setUniversities([...nodeUnis, ...collegeUnis]);
       setLoading(false);
     }
-  }, [node?.id]);
+  }, [node?.id, node?.universities]);
 
   if (!node) return null;
 

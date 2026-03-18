@@ -1,7 +1,7 @@
 export interface University {
   name: string;
   fees: string;
-  duration: string;
+  duration?: string;
   location: string;
   ranking?: string;
   specialization?: string;

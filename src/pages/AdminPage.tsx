@@ -427,8 +427,12 @@ const AdminPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          )}
-      {/* Modal */}
+          ) : null}
+        </div>
+      </div>
+    </main>
+
+    {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
@@ -550,8 +554,6 @@ const AdminPage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
-        </div>
-      </main>
     </div>
   );
 };

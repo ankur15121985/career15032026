@@ -8,44 +8,6 @@ import { createServer as createViteServer } from "vite";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load Firebase Config
-const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-const altConfigPath = path.join(__dirname, "..", "firebase-applet-config.json");
-let firebaseConfig: any = {};
-
-const loadConfig = () => {
-  console.log("[Debug] Current CWD:", process.cwd());
-  console.log("[Debug] Current __dirname:", __dirname);
-  try {
-    if (fs.existsSync(configPath)) {
-      firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      console.log("[Firebase Config] Loaded from process.cwd()");
-    } else if (fs.existsSync(altConfigPath)) {
-      firebaseConfig = JSON.parse(fs.readFileSync(altConfigPath, "utf-8"));
-      console.log("[Firebase Config] Loaded from __dirname/..");
-    } else {
-      console.warn("[Firebase Config] Config file not found. Trying environment variables.");
-      firebaseConfig = {
-        projectId: process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID,
-        firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID
-      };
-    }
-    console.log("[Firebase Config] Project ID:", firebaseConfig.projectId);
-    console.log("[Firebase Config] Database ID:", firebaseConfig.firestoreDatabaseId);
-    console.log("[Firebase Config] Keys found:", Object.keys(firebaseConfig).join(", "));
-  } catch (e: any) {
-    console.error("[Firebase Config] Error loading config:", e.message);
-  }
-};
-
-loadConfig();
-
-// Initialize Firebase Admin at top level
-// Firebase Admin removed to eliminate dependency
-let db: any = null;
-const getDb = () => null;
-const resetDbToDefault = () => null;
-
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
 
@@ -144,7 +106,7 @@ async function createServer() {
 
   // Health Check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", firebase: false });
+    res.json({ status: "ok" });
   });
 
   // Visitor Count API

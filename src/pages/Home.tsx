@@ -5,18 +5,13 @@ import { Compass, BookOpen, Target, GraduationCap, ArrowRight, Sparkles, Lock, U
 
 const Home: React.FC = () => {
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
-  const [isBackendDown, setIsBackendDown] = useState(false);
 
   useEffect(() => {
     fetch('/api/visitor-count')
-      .then(res => {
-        if (!res.ok) throw new Error('Backend down');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => setVisitorCount(data.count))
       .catch(err => {
         console.error("Failed to fetch visitor count", err);
-        setIsBackendDown(true);
       });
   }, []);
 
@@ -87,17 +82,6 @@ const Home: React.FC = () => {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 {visitorCount.toLocaleString()} Unique Visitors
-              </motion.div>
-            )}
-
-            {isBackendDown && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-3 py-1 bg-rose-500/20 backdrop-blur-md text-rose-400 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6 border border-rose-500/20"
-              >
-                <AlertTriangle className="w-3 h-3" />
-                Backend Offline - Features Limited
               </motion.div>
             )}
             

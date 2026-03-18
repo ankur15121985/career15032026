@@ -12,13 +12,11 @@ import Result from './pages/Result';
 import GraphPage from './pages/GraphPage';
 import AdminPage from './pages/AdminPage';
 import ThemeSwitcher from './components/ThemeSwitcher';
-import BackendWarning from './components/BackendWarning';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeSwitcher />
-      <BackendWarning />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
