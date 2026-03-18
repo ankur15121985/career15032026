@@ -1,11 +1,10 @@
-# Waqt Career Explorer - Firebase Integrated
+# Waqt Career Explorer
 
-This project is a comprehensive career exploration platform integrated with Firebase for data storage and authentication.
+This project is a comprehensive career exploration platform.
 
 ## Prerequisites
 - Node.js (v18 or higher)
 - npm
-- Firebase Project
 
 ## Local Installation
 
@@ -14,22 +13,19 @@ This project is a comprehensive career exploration platform integrated with Fire
    ```bash
    npm install
    ```
-3. **Configure Firebase**:
-   Ensure `firebase-applet-config.json` is present in the root directory with your Firebase project credentials.
-4. **Run the development server**:
+3. **Run the development server**:
    ```bash
    npm run dev
    ```
-5. **Access the application**:
+4. **Access the application**:
    Open your browser and navigate to `http://localhost:3000`.
 
 ## Project Structure
 - `src/`: React frontend source code.
-- `server.ts`: Express backend using Firebase Admin SDK for email and IP logging.
-- `firebase-applet-config.json`: Firebase configuration.
+- `api/index.ts`: Express backend for visitor tracking and email notifications.
 - `package.json`: Project dependencies and scripts.
 
 ## Notes
-- The application uses Firebase Firestore for data storage and Firebase Authentication for admin access.
+- The application uses an in-memory visitor counter and local API for appointments.
 - The frontend is built with React, Vite, Tailwind CSS, and Recharts.
-- Animations are powered by Framer Motion.
+- Animations are powered by Motion.
