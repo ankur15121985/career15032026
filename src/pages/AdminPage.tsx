@@ -428,12 +428,6 @@ const AdminPage: React.FC = () => {
               </table>
             </div>
           )}
-        </div>
-      </main>
-    </div>
-  );
-};
-
       {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
@@ -556,6 +550,8 @@ const AdminPage: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+        </div>
+      </main>
     </div>
   );
 };
