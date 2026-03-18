@@ -1,12 +1,7 @@
 import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
-import fs from "fs";
+import path from "path";
 import { createServer as createViteServer } from "vite";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -19,18 +14,15 @@ const getTransporter = () => {
 
   if (!transporter) {
     if (!host || !user || !pass) {
-      console.warn("[Email Debug] SMTP configuration missing. Email sending will be skipped.");
+      console.warn("[Email] SMTP config missing. Skipping email.");
       return null;
     }
-
     transporter = nodemailer.createTransport({
       host,
       port,
       secure: port === 465,
       auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false
-      }
+      tls: { rejectUnauthorized: false }
     });
   }
   return transporter;
@@ -40,7 +32,7 @@ const sendAppointmentEmail = async (appointment: any) => {
   const mailTransporter = getTransporter();
   if (!mailTransporter) return;
 
-  const from = process.env.SMTP_FROM || (process.env.SMTP_USER?.includes('@') ? process.env.SMTP_USER : 'noreply@careerexplorer.com');
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@careersirji.com';
   const { user_email, user_name, consultant_name, appointment_time, top_recommendation } = appointment;
 
   let date = "Scheduled Time";
@@ -58,75 +50,72 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 
   const mailOptions = {
-    from: `"Career Explorer" <${from}>`,
+    from: `"CareerSirji" <${from}>`,
     to: user_email,
-    subject: "Appointment Confirmation - Career Explorer",
+    subject: "Appointment Confirmation - CareerSirji",
     html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
-        <h2 style="color: #4f46e5;">Appointment Confirmed!</h2>
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;">
+        <h2 style="color:#4f46e5;">Appointment Confirmed!</h2>
         <p>Hello <strong>${user_name}</strong>,</p>
         <p>Your career counseling appointment has been successfully scheduled.</p>
-        
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 5px 0;"><strong>Consultant:</strong> ${consultant_name}</p>
-          <p style="margin: 5px 0;"><strong>Time:</strong> ${date}</p>
-          <p style="margin: 5px 0;"><strong>Top Recommendation:</strong> ${top_recommendation}</p>
+        <div style="background:#f8fafc;padding:20px;border-radius:8px;margin:20px 0;">
+          <p style="margin:5px 0;"><strong>Consultant:</strong> ${consultant_name}</p>
+          <p style="margin:5px 0;"><strong>Time:</strong> ${date}</p>
+          <p style="margin:5px 0;"><strong>Top Recommendation:</strong> ${top_recommendation}</p>
         </div>
-        
-        <p>Please ensure you are available at the scheduled time. We look forward to helping you explore your career path!</p>
-        
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #64748b;">This is an automated message from Career Explorer. Please do not reply to this email.</p>
+        <p>We look forward to helping you explore your career path!</p>
+        <hr style="border:0;border-top:1px solid #e2e8f0;margin:20px 0;"/>
+        <p style="font-size:12px;color:#64748b;">Automated message from CareerSirji. Do not reply.</p>
       </div>
     `
   };
 
   try {
     const info = await mailTransporter.sendMail(mailOptions);
-    console.log(`[Email] Success! Message ID: ${info.messageId}`);
+    console.log(`[Email] Sent! ID: ${info.messageId}`);
   } catch (error: any) {
-    console.error("[Email] Failed to send appointment email:", error);
+    console.error("[Email] Failed:", error);
   }
 };
 
-async function createServer() {
-  const app = express();
-  app.use(express.json());
+// Create Express app
+const app = express();
+app.use(express.json());
 
-  // In-memory visitor counter (resets on restart)
-  let visitorCount = 1250; // Starting with a base number
+// In-memory visitor counter
+let visitorCount = 1250;
 
-  // Visitor Tracking Middleware
-  app.use(async (req, res, next) => {
-    if (req.path === '/' || req.path === '/index.html') {
-      visitorCount++;
-    }
-    next();
-  });
+// Visitor Tracking
+app.use((req, _res, next) => {
+  if (req.path === '/' || req.path === '/index.html') {
+    visitorCount++;
+  }
+  next();
+});
 
-  // Health Check
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
+// Health Check
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
 
-  // Visitor Count API
-  app.get("/api/visitor-count", async (req, res) => {
-    res.json({ count: visitorCount });
-  });
+// Visitor Count
+app.get("/api/visitor-count", (_req, res) => {
+  res.json({ count: visitorCount });
+});
 
-  // Appointment Booking API
-  app.post("/api/appointments", async (req, res) => {
-    try {
-      const appointmentData = req.body;
-      console.log("[API] Attempting to send email...");
-      await sendAppointmentEmail(appointmentData);
-      res.json({ success: true, id: 'local-' + Date.now() });
-    } catch (error: any) {
-      console.error("[API] Failed to book appointment:", error.message);
-      res.status(500).json({ error: error.message || "Failed to book appointment" });
-    }
-  });
+// Appointment Booking
+app.post("/api/appointments", async (req, res) => {
+  try {
+    const appointmentData = req.body;
+    await sendAppointmentEmail(appointmentData);
+    res.json({ success: true, id: 'appt-' + Date.now() });
+  } catch (error: any) {
+    console.error("[API] Failed:", error.message);
+    res.status(500).json({ error: error.message || "Failed to book appointment" });
+  }
+});
 
+async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -137,7 +126,7 @@ async function createServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
@@ -146,10 +135,9 @@ async function createServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
-
-  return app;
 }
 
-const serverPromise = createServer();
+startServer();
 
-export default serverPromise;
+// ✅ Export app for Vercel compatibility
+export default app;

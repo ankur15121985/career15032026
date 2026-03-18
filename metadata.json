@@ -1,5 +1,5 @@
 {
-  "name": "Career Explorer Graph",
-  "description": "An interactive hierarchical graph for exploring career paths and educational opportunities.",
+  "name": "CareerSirji",
+  "description": "A career counseling platform to help you explore your career path.",
   "requestFramePermissions": []
 }
