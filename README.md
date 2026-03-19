@@ -30,4 +30,3 @@ This project is a comprehensive career exploration platform.
 - The frontend is built with React, Vite, Tailwind CSS, and Recharts.
 - Animations are powered by Motion.
 
-trigger: redeploy with fixed vercel config
