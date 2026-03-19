@@ -1,7 +1,5 @@
 import express from "express";
 import nodemailer from "nodemailer";
-import path from "path";
-import { createServer as createViteServer } from "vite";
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -86,7 +84,7 @@ app.use(express.json());
 let visitorCount = 1250;
 
 // Visitor Tracking
-app.use((req, _res, next) => {
+app.use((req, res, next) => {
   if (req.path === '/' || req.path === '/index.html') {
     visitorCount++;
   }
@@ -94,12 +92,12 @@ app.use((req, _res, next) => {
 });
 
 // Health Check
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
 // Visitor Count
-app.get("/api/visitor-count", (_req, res) => {
+app.get("/api/visitor-count", (req, res) => {
   res.json({ count: visitorCount });
 });
 
@@ -115,29 +113,5 @@ app.post("/api/appointments", async (req, res) => {
   }
 });
 
-async function startServer() {
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  const PORT = 3000;
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-startServer();
-
-// ✅ Export app for Vercel compatibility
+// Export app directly — NO app.listen(), NO Vite, NO Promise
 export default app;
