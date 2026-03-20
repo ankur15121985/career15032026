@@ -11,11 +11,34 @@ import {
   Briefcase,
   X,
   Save,
-  Loader2
+  Loader2,
+  LogOut,
+  Database,
+  AlertTriangle,
+  Search,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
+import { auth, db } from '../firebase';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  User
+} from 'firebase/auth';
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  setDoc,
+  query,
+  writeBatch
+} from 'firebase/firestore';
 import { CAREERS } from '../data/careers';
 import { COLLEGES } from '../data/colleges';
-import { QUESTIONS } from '../data/questions';
 
 interface Career {
   id: string;
@@ -40,81 +63,137 @@ interface College {
 }
 
 const AdminPage: React.FC = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'careers' | 'colleges'>('careers');
-  const [adminPassword, setAdminPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   // Data states
-  const [careers, setCareers] = useState<Career[]>(CAREERS as any);
-  const [colleges, setColleges] = useState<College[]>(COLLEGES as any);
+  const [careers, setCareers] = useState<Career[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [updateLoading, setUpdateLoading] = useState(false);
-
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminPassword === 'admin123') {
-      setIsAdmin(true);
-    } else {
-      setError('Invalid password');
-    }
-  };
+  const [syncing, setSyncing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: string; callback: () => void } | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Search and Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchTabData(activeTab);
-    }
-  }, [isAdmin, activeTab]);
+    const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
+      setUser(user);
+      setLoading(false);
+      if (user) {
+        fetchTabData(activeTab);
+      }
+    });
+    return () => unsubscribe();
+  }, [activeTab]);
 
-  const fetchTabData = async (tab: string) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      if (tab === 'careers') setCareers(CAREERS as any);
-      if (tab === 'colleges') setColleges(COLLEGES as any);
-    } catch (err) {
-      console.error(`Failed to fetch data for ${tab}`, err);
-      setError(`Failed to load ${tab} data.`);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err: any) {
+      console.error('Login failed', err);
+      setError(err.message || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setIsAdmin(false);
-    setAdminPassword('');
+  const handleFirestoreError = (error: unknown, operationType: string, path: string | null) => {
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        providerInfo: auth.currentUser?.providerData.map((provider: any) => ({
+          providerId: provider.providerId,
+          displayName: provider.displayName,
+          email: provider.email,
+          photoUrl: provider.photoURL
+        })) || []
+      },
+      operationType,
+      path
+    };
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
   };
 
-  const handleDeleteCareer = (id: string) => {
-    setCareers(careers.filter(c => c.id !== id));
+  const fetchTabData = async (tab: string) => {
+    setLoading(true);
+    try {
+      const colRef = collection(db, tab);
+      const q = query(colRef);
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })) as any;
+      if (tab === 'careers') setCareers(data);
+      if (tab === 'colleges') setColleges(data);
+    } catch (err) {
+      handleFirestoreError(err, 'get', tab);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteCollege = (id: string) => {
-    setColleges(colleges.filter(c => c.id !== id));
+  const handleLogout = async () => {
+    await signOut(auth);
   };
 
-  const formatDateTime = (timestamp: any) => {
-    if (!timestamp) return '-';
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
+  const handleDeleteCareer = async (id: string) => {
+    setConfirmAction({
+      type: 'Delete Career',
+      callback: async () => {
+        try {
+          await deleteDoc(doc(db, 'careers', id));
+          setCareers(careers.filter(c => c.id !== id));
+          setConfirmAction(null);
+          setSuccessMessage('Career deleted successfully');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (err) {
+          handleFirestoreError(err, 'delete', `careers/${id}`);
+        }
+      }
     });
   };
 
-  const handleSaveCareer = (e: React.FormEvent) => {
+  const handleDeleteCollege = async (id: string) => {
+    setConfirmAction({
+      type: 'Delete College',
+      callback: async () => {
+        try {
+          await deleteDoc(doc(db, 'colleges', id));
+          setColleges(colleges.filter(c => c.id !== id));
+          setConfirmAction(null);
+          setSuccessMessage('College deleted successfully');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (err) {
+          handleFirestoreError(err, 'delete', `colleges/${id}`);
+        }
+      }
+    });
+  };
+
+  const handleSaveCareer = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUpdateLoading(true);
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData.entries());
     
+    const careerId = editingItem?.id || (data.id as string);
     const careerData = {
-      id: editingItem?.id || (data.name as string).toLowerCase().replace(/\s+/g, '-'),
       name: data.name as string,
       type: data.type as string,
       parent_id: data.parent_id as string || null,
@@ -123,38 +202,139 @@ const AdminPage: React.FC = () => {
       is_leaf: data.is_leaf === 'on'
     };
 
-    if (editingItem) {
-      setCareers(careers.map(c => c.id === editingItem.id ? careerData : c));
-    } else {
-      setCareers([...careers, careerData]);
+    try {
+      await setDoc(doc(db, 'careers', careerId), careerData);
+      await fetchTabData('careers');
+      setIsModalOpen(false);
+      setEditingItem(null);
+      setSuccessMessage('Career saved successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      handleFirestoreError(err, 'write', `careers/${careerId}`);
+    } finally {
+      setUpdateLoading(false);
     }
-    setIsModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleSaveCollege = (e: React.FormEvent) => {
+  const handleSaveCollege = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUpdateLoading(true);
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData.entries());
     
     const collegeData = {
-      id: editingItem?.id || Math.random().toString(36).substr(2, 9),
-      ...data
-    } as any;
+      career_id: data.career_id as string,
+      name: data.name as string,
+      location: data.location as string,
+      fees: data.fees as string,
+      duration: data.duration as string,
+      ranking: data.ranking as string,
+      specialization: data.specialization as string,
+      website: data.website as string || ''
+    };
 
-    if (editingItem) {
-      setColleges(colleges.map(c => c.id === editingItem.id ? collegeData : c));
-    } else {
-      setColleges([...colleges, collegeData]);
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, 'colleges', editingItem.id), collegeData);
+      } else {
+        await addDoc(collection(db, 'colleges'), collegeData);
+      }
+      await fetchTabData('colleges');
+      setIsModalOpen(false);
+      setEditingItem(null);
+      setSuccessMessage('College saved successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      handleFirestoreError(err, editingItem ? 'update' : 'create', 'colleges');
+    } finally {
+      setUpdateLoading(false);
     }
-    setIsModalOpen(false);
-    setEditingItem(null);
   };
 
-  const [testEmail, setTestEmail] = useState('');
-  const [testLoading, setTestLoading] = useState(false);
+  const syncDataToFirestore = async () => {
+    setConfirmAction({
+      type: 'Sync Static Data to Firestore',
+      callback: async () => {
+        setSyncing(true);
+        setConfirmAction(null);
+        try {
+          const batch = writeBatch(db);
+          
+          // Sync Careers
+          for (const career of CAREERS) {
+            const careerRef = doc(db, 'careers', career.id);
+            batch.set(careerRef, {
+              name: career.name,
+              type: career.type,
+              parent_id: career.parent_id,
+              duration: career.duration,
+              job_roles: career.job_roles,
+              is_leaf: career.is_leaf
+            });
+          }
+          
+          // Sync Colleges
+          for (const college of COLLEGES) {
+            const { id, ...collegeData } = college;
+            const collegeRef = doc(db, 'colleges', id);
+            batch.set(collegeRef, collegeData);
+          }
+          
+          await batch.commit();
+          setSuccessMessage('Data synced successfully!');
+          setTimeout(() => setSuccessMessage(''), 3000);
+          fetchTabData(activeTab);
+        } catch (err) {
+          handleFirestoreError(err, 'write', 'sync');
+        } finally {
+          setSyncing(false);
+        }
+      }
+    });
+  };
 
-  if (!isAdmin) {
+  const filteredAndSortedData = React.useMemo(() => {
+    let result: any[] = activeTab === 'careers' ? [...careers] : [...colleges];
+
+    // Search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter((item: any) => 
+        (item.name?.toLowerCase().includes(lowerSearch)) ||
+        (item.id?.toLowerCase().includes(lowerSearch)) ||
+        (item.career_id?.toLowerCase().includes(lowerSearch)) ||
+        (item.location?.toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    // Filter by type (careers only)
+    if (activeTab === 'careers' && filterType !== 'all') {
+      result = result.filter((item: any) => item.type === filterType);
+    }
+
+    // Sort
+    if (sortConfig) {
+      result.sort((a: any, b: any) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [careers, colleges, activeTab, searchTerm, filterType, sortConfig]);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
         {/* Decorative Background */}
@@ -177,7 +357,7 @@ const AdminPage: React.FC = () => {
             </div>
             <h1 className="text-3xl font-display font-bold text-white tracking-tight text-center">Career Sirji Admin</h1>
             <p className="text-slate-400 text-sm text-center mt-3 leading-relaxed">
-              Enter admin password to access the dashboard.
+              Sign in with your admin credentials.
             </p>
           </div>
 
@@ -193,13 +373,24 @@ const AdminPage: React.FC = () => {
             )}
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Admin Password</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email</label>
+              <input 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@careersirji.com"
+                className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                 <input 
                   type="password"
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 />
@@ -211,8 +402,8 @@ const AdminPage: React.FC = () => {
               disabled={loading}
               className="w-full py-5 bg-white text-slate-950 rounded-2xl font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 group disabled:opacity-50"
             >
-              Access Dashboard
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
+              {!loading && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
         </motion.div>
@@ -222,6 +413,42 @@ const AdminPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
+      {/* Success Message Toast */}
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-[100] animate-bounce">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="w-16 h-16 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+            </div>
+            <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white mb-2">Confirm Action</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+              Are you sure you want to proceed with <span className="font-bold text-slate-900 dark:text-white">{confirmAction.type}</span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 px-6 py-3 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction.callback}
+                className="flex-1 px-6 py-3 bg-rose-600 text-white rounded-2xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-100 dark:shadow-none"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-72 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col fixed inset-y-0 z-50">
         <div className="p-8">
@@ -257,40 +484,48 @@ const AdminPage: React.FC = () => {
         </div>
 
         <div className="mt-auto p-8 border-t border-slate-100 dark:border-slate-800">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
-          >
-            <RefreshCw className="w-5 h-5" />
-            Logout
-          </button>
-        </div>
-      </aside>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </div>
+        </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-72 min-h-screen p-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-            <div>
-              <h1 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-2 capitalize">
-                {activeTab.replace('-', ' ')}
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400">
-                {activeTab === 'careers' && 'Manage career paths and branching structures.'}
-                {activeTab === 'colleges' && 'Manage institutions and their specializations.'}
-              </p>
-            </div>
-            
-            <div className="flex gap-4">
-              <button 
-                onClick={() => fetchTabData(activeTab)}
-                disabled={loading}
-                className="px-6 py-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
-              >
-                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
+        {/* Main Content */}
+        <main className="flex-1 ml-72 min-h-screen p-12">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+              <div>
+                <h1 className="text-4xl font-display font-bold text-slate-900 dark:text-white mb-2 capitalize">
+                  {activeTab.replace('-', ' ')}
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400">
+                  {activeTab === 'careers' && 'Manage career paths and branching structures.'}
+                  {activeTab === 'colleges' && 'Manage institutions and their specializations.'}
+                </p>
+              </div>
+              
+              <div className="flex gap-4">
+                <button 
+                  onClick={syncDataToFirestore}
+                  disabled={syncing}
+                  className="px-6 py-3 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all flex items-center gap-2"
+                >
+                  <Database className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Data'}
+                </button>
+                <button 
+                  onClick={() => fetchTabData(activeTab)}
+                  disabled={loading}
+                  className="px-6 py-3 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
               {['careers', 'colleges'].includes(activeTab) && (
                 <button 
                   onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
@@ -321,27 +556,76 @@ const AdminPage: React.FC = () => {
           )}
 
           {/* Content Area */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input 
+                type="text"
+                placeholder={`Search ${activeTab}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white transition-all"
+              />
+            </div>
+            {activeTab === 'careers' && (
+              <div className="relative min-w-[200px]">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <select 
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white appearance-none transition-all"
+                >
+                  <option value="all">All Types</option>
+                  <option value="root">Root</option>
+                  <option value="branch">Branch</option>
+                  <option value="leaf">Leaf</option>
+                </select>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
           {activeTab === 'careers' ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">ID</th>
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Name</th>
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Type</th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('id')}
+                    >
+                      <div className="flex items-center gap-2">
+                        ID <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Name <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('type')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Type <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Duration</th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {careers.length === 0 ? (
+                  {filteredAndSortedData.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-8 py-20 text-center text-slate-500 dark:text-slate-400">
-                        No careers found.
+                      <td colSpan={5} className="px-8 py-20 text-center text-slate-500 dark:text-slate-400">
+                        No careers found matching your criteria.
                       </td>
                     </tr>
-                  ) : careers.map((career) => (
+                  ) : filteredAndSortedData.map((career: any) => (
                     <tr key={career.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-8 py-5 font-mono text-xs text-slate-400 dark:text-slate-500">{career.id}</td>
                       <td className="px-8 py-5 font-bold text-slate-900 dark:text-white">
@@ -386,21 +670,42 @@ const AdminPage: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">College Name</th>
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Career Link</th>
-                    <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Location</th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-2">
+                        College Name <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('career_id')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Career Link <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
+                    <th 
+                      className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 cursor-pointer hover:text-indigo-600 transition-colors"
+                      onClick={() => handleSort('location')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Location <ArrowUpDown className="w-3 h-3" />
+                      </div>
+                    </th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Fees</th>
                     <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {colleges.length === 0 ? (
+                  {filteredAndSortedData.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-8 py-20 text-center text-slate-500 dark:text-slate-400">
-                        No colleges found.
+                        No colleges found matching your criteria.
                       </td>
                     </tr>
-                  ) : colleges.map((college) => (
+                  ) : filteredAndSortedData.map((college: any) => (
                     <tr key={college.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-8 py-5 font-bold text-slate-900 dark:text-white">{college.name}</td>
                       <td className="px-8 py-5 text-slate-400 dark:text-slate-500 text-xs font-mono">{college.career_id}</td>
@@ -495,7 +800,7 @@ const AdminPage: React.FC = () => {
                       <textarea name="job_roles" defaultValue={editingItem?.job_roles} rows={2} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white resize-none" placeholder="e.g. Software Engineer, Data Scientist, Web Developer" />
                     </div>
                     <div className="flex items-center gap-3 pt-8">
-                      <input type="checkbox" name="is_leaf" defaultChecked={editingItem?.is_leaf === 1} className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                      <input type="checkbox" name="is_leaf" defaultChecked={editingItem?.is_leaf} className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                       <label className="text-sm font-bold text-slate-700">Is Leaf Node?</label>
                     </div>
                   </div>
@@ -542,8 +847,17 @@ const AdminPage: React.FC = () => {
                 )}
 
                 <div className="pt-6 flex gap-4">
-                  <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
-                    <Save className="w-5 h-5" /> Save Changes
+                  <button 
+                    type="submit" 
+                    disabled={updateLoading}
+                    className={`flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 ${updateLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {updateLoading ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Save className="w-5 h-5" />
+                    )}
+                    {updateLoading ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all">
                     Cancel

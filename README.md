@@ -29,4 +29,3 @@ This project is a comprehensive career exploration platform.
 - The application uses an in-memory visitor counter and local API for appointments.
 - The frontend is built with React, Vite, Tailwind CSS, and Recharts.
 - Animations are powered by Motion.
-

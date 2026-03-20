@@ -1,7 +1,11 @@
 import express from "express";
 import nodemailer from "nodemailer";
-// NO path, NO fs, NO url, NO createViteServer
+import path from "path";
+import { fileURLToPath } from "url";
+import { createServer as createViteServer } from "vite";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -78,42 +82,63 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
-// Create Express app
-const app = express();
-app.use(express.json());
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+  app.use(express.json());
 
-// In-memory visitor counter
-let visitorCount = 1250;
+  // In-memory visitor counter
+  let visitorCount = 1250;
 
-// Visitor Tracking
-app.use((req, res, next) => {
-  if (req.path === '/' || req.path === '/index.html') {
-    visitorCount++;
+  // Visitor Tracking
+  app.use((req, res, next) => {
+    if (req.path === '/' || req.path === '/index.html') {
+      visitorCount++;
+    }
+    next();
+  });
+
+  // Health Check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  // Visitor Count
+  app.get("/api/visitor-count", (req, res) => {
+    console.log(`[API] GET /api/visitor-count - current count: ${visitorCount}`);
+    res.json({ count: visitorCount });
+  });
+
+  // Appointment Booking
+  app.post("/api/appointments", async (req, res) => {
+    try {
+      const appointmentData = req.body;
+      await sendAppointmentEmail(appointmentData);
+      res.json({ success: true, id: 'appt-' + Date.now() });
+    } catch (error: any) {
+      console.error("[API] Failed:", error.message);
+      res.status(500).json({ error: error.message || "Failed to book appointment" });
+    }
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
-  next();
-});
 
-// Health Check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
-});
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
-// Visitor Count
-app.get("/api/visitor-count", (req, res) => {
-  res.json({ count: visitorCount });
-});
-
-// Appointment Booking
-app.post("/api/appointments", async (req, res) => {
-  try {
-    const appointmentData = req.body;
-    await sendAppointmentEmail(appointmentData);
-    res.json({ success: true, id: 'appt-' + Date.now() });
-  } catch (error: any) {
-    console.error("[API] Failed:", error.message);
-    res.status(500).json({ error: error.message || "Failed to book appointment" });
-  }
-});
-
-// Export app directly — NO app.listen(), NO Vite, NO Promise
-export default app;
+startServer();

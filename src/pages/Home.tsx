@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Compass, BookOpen, Target, GraduationCap, ArrowRight, Sparkles, Lock, Users, AlertTriangle } from 'lucide-react';
+import { Compass, Target, GraduationCap, ArrowRight, Users } from 'lucide-react';
 
 const Home: React.FC = () => {
   const [visitorCount, setVisitorCount] = useState<number | null>(null);

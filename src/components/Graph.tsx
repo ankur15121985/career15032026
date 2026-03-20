@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { CareerNode } from '../types';
-import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCcw } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -13,7 +12,6 @@ interface GraphProps {
 
 const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [root, setRoot] = useState<d3.HierarchyNode<CareerNode> | null>(null);
   const { theme } = useTheme();
 
   const [regroupTrigger, setRegroupTrigger] = useState(0);
@@ -37,7 +35,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
 
     const g = svg.append('g');
 
-    const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event) => {
+    const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event: any) => {
       g.attr('transform', event.transform);
     });
 
@@ -50,7 +48,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
     window.addEventListener('resize', handleResize);
 
     const treeLayout = d3.tree<CareerNode>()
-      .nodeSize([80, 250]); // Increased spacing for labels
+      .nodeSize([100, 300]); // Increased spacing for labels and branches
 
     const hierarchy = d3.hierarchy(data, (d) => d.children);
     
@@ -70,8 +68,6 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       }
     }
 
-    setRoot(hierarchy);
-
     const update = (source: any) => {
       const isDarkMode = document.documentElement.classList.contains('dark');
       const nodes = hierarchy.descendants();
@@ -90,8 +86,8 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
         .attr('stroke-width', 2)
         .attr('fill', 'none')
         .attr('d', d3.linkHorizontal()
-          .x((d: any) => source.y0 || source.y)
-          .y((d: any) => source.x0 || source.x) as any);
+          .x(() => (source as any).y0 || (source as any).y)
+          .y(() => (source as any).x0 || (source as any).x) as any);
 
       const linkUpdate = linkEnter.merge(link as any);
       linkUpdate.transition()
@@ -104,8 +100,8 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       link.exit().transition()
         .duration(500)
         .attr('d', d3.linkHorizontal()
-          .x((d: any) => source.y)
-          .y((d: any) => source.x) as any)
+          .x(() => (source as any).y)
+          .y(() => (source as any).x) as any)
         .remove();
 
       // Nodes
@@ -115,12 +111,11 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       const nodeEnter = node.enter()
         .append('g')
         .attr('class', 'graph-node')
-        .attr('transform', `translate(${source.y0 || source.y},${source.x0 || source.x})`)
+        .attr('transform', `translate(${(source as any).y0 || (source as any).y},${(source as any).x0 || (source as any).x})`)
         .style('cursor', 'pointer')
-        .on('click', (event, d: any) => {
-          if (d.data.is_leaf) {
-            onNodeClick(d.data);
-          } else {
+        .on('click', (event: any, d: any) => {
+          // Toggle expansion for non-leaf nodes
+          if (!d.data.is_leaf) {
             if (d.children) {
               d._children = d.children;
               d.children = undefined;
@@ -130,10 +125,14 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
             }
             update(d);
           }
+          
+          // Always open side panel on click
+          onNodeClick(d.data);
+          event.stopPropagation();
         });
 
       nodeEnter.append('circle')
-        .attr('r', (d: any) => d.data.type === 'root' ? 16 : d.data.is_leaf ? 8 : 12)
+        .attr('r', (d: any) => d.data.type === 'root' ? 18 : d.data.is_leaf ? 10 : 14)
         .attr('fill', (d: any) => {
           if (d.data.type === 'root') return isDarkMode ? '#818cf8' : '#1e293b';
           if (d.data.is_leaf) return '#10b981';
@@ -141,15 +140,23 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
           return colors[d.depth % colors.length];
         })
         .attr('stroke', isDarkMode ? '#0f172a' : '#fff')
-        .attr('stroke-width', 3);
+        .attr('stroke-width', 4)
+        .style('filter', (d: any) => d.data.is_leaf ? 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.4))' : 'none');
+
+      // Add a smaller inner circle for a "hardware" look
+      nodeEnter.append('circle')
+        .attr('r', (d: any) => d.data.type === 'root' ? 6 : d.data.is_leaf ? 3 : 4)
+        .attr('fill', '#fff')
+        .attr('opacity', 0.5);
 
       nodeEnter.append('text')
         .attr('dy', '0.31em')
-        .attr('x', (d: any) => d.children || d._children ? -24 : 24)
+        .attr('x', (d: any) => d.children || d._children ? -28 : 28)
         .attr('text-anchor', (d: any) => d.children || d._children ? 'end' : 'start')
         .text((d: any) => d.data.name)
         .attr('class', 'font-display text-sm font-bold tracking-tight')
-        .style('fill', (d: any) => isDarkMode ? '#f8fafc' : '#0f172a');
+        .style('fill', () => isDarkMode ? '#f8fafc' : '#0f172a')
+        .style('text-shadow', isDarkMode ? '0 2px 4px rgba(0,0,0,0.5)' : '0 1px 2px rgba(255,255,255,0.8)');
 
       const nodeUpdate = nodeEnter.merge(node as any);
 
@@ -158,13 +165,13 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
         .attr('transform', (d: any) => `translate(${d.y},${d.x})`);
 
       nodeUpdate.select('text')
-        .attr('x', (d: any) => d.children || d._children ? -24 : 24)
+        .attr('x', (d: any) => d.children || d._children ? -28 : 28)
         .attr('text-anchor', (d: any) => d.children || d._children ? 'end' : 'start')
-        .style('fill', (d: any) => isDarkMode ? '#f8fafc' : '#0f172a');
+        .style('fill', () => isDarkMode ? '#f8fafc' : '#0f172a');
 
       node.exit().transition()
         .duration(500)
-        .attr('transform', `translate(${source.y},${source.x})`)
+        .attr('transform', () => `translate(${(source as any).y},${(source as any).x})`)
         .remove();
 
       nodes.forEach((d: any) => {
@@ -182,18 +189,28 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [data, regroupTrigger, theme]);
+  }, [data, regroupTrigger, theme, expandAll, onNodeClick]);
 
   return (
     <div className="w-full h-full relative overflow-hidden">
       <svg ref={svgRef} className="w-full h-full" />
       
-      <div className="absolute top-28 right-8 flex gap-4 pointer-events-auto z-[110]">
+      <div className="absolute top-28 right-8 flex flex-col items-end gap-4 pointer-events-auto z-[110]">
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">System Status</span>
+          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Live: Career Data</span>
+          </div>
+        </div>
+
         <button 
           onClick={regroup}
-          className="px-6 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-full font-bold shadow-xl border border-slate-200 dark:border-slate-700 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          className="group relative px-6 py-3 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl font-bold shadow-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all flex items-center gap-3 overflow-hidden"
         >
-          <RefreshCcw className="w-4 h-4" /> Regroup Branches
+          <div className="absolute inset-0 bg-indigo-600/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+          <RefreshCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+          <span className="relative z-10 text-xs uppercase tracking-widest">Regroup Branches</span>
         </button>
       </div>
 

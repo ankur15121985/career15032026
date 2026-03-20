@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, User, X, Clock } from 'lucide-react';
+import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, User, X, Clock, ExternalLink, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { db } from '../firebase';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 
 const Result: React.FC = () => {
   const location = useLocation();
@@ -10,6 +12,9 @@ const Result: React.FC = () => {
   const [appointmentTime, setAppointmentTime] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [recommendedColleges, setRecommendedColleges] = useState<any[]>([]);
+  const [loadingColleges, setLoadingColleges] = useState(false);
   const data = location.state as { answers: any[], contactInfo: any } | null;
 
   if (!data) return <Navigate to="/quiz" />;
@@ -18,11 +23,11 @@ const Result: React.FC = () => {
 
   // Analysis logic
   const getScores = () => {
-    const aq = answers.filter(a => a.type === 'AQ');
-    const iq = answers.filter(a => a.type === 'IQ');
+    const aq = answers.filter((a: { type: string }) => a.type === 'AQ');
+    const iq = answers.filter((a: { type: string }) => a.type === 'IQ');
 
-    const aqScore = Math.round((aq.filter(a => a.isCorrect).length / aq.length) * 100) || 0;
-    const iqScore = Math.round((iq.filter(a => a.isCorrect).length / iq.length) * 100) || 0;
+    const aqScore = Math.round((aq.filter((a: { isCorrect: boolean }) => a.isCorrect).length / aq.length) * 100) || 0;
+    const iqScore = Math.round((iq.filter((a: { isCorrect: boolean }) => a.isCorrect).length / iq.length) * 100) || 0;
 
     return { aqScore, iqScore };
   };
@@ -33,7 +38,7 @@ const Result: React.FC = () => {
     // For the chart, we can show category-wise performance
     const categories: Record<string, { correct: number, total: number }> = {};
     
-    answers.forEach(ans => {
+    answers.forEach((ans: { category: string; isCorrect: boolean }) => {
       if (!categories[ans.category]) {
         categories[ans.category] = { correct: 0, total: 0 };
       }
@@ -55,22 +60,67 @@ const Result: React.FC = () => {
     const sorted = [...chartData].sort((a, b) => b.value - a.value);
     const top = sorted[0]?.name;
     
-    if (top === 'Numerical') return ['Data Science', 'Finance', 'Engineering'];
+    if (top === 'Numerical') return ['Computer Science', 'Finance', 'Engineering'];
     if (top === 'Logical') return ['Software Engineering', 'Research', 'Architecture'];
     if (top === 'Verbal') return ['Journalism', 'Law', 'Marketing'];
     if (top === 'Situational') return ['Management', 'Human Resources', 'Public Relations'];
     return ['General Management', 'Business Administration'];
   };
 
-  const recommendations = getRecommendations();
+  const recommendations = React.useMemo(() => getRecommendations(), [chartData]);
+
+  // Fetch colleges based on recommendations
+  useEffect(() => {
+    const fetchColleges = async () => {
+      setLoadingColleges(true);
+      try {
+        // Map recommendation names to career_ids or specializations
+        const mapping: Record<string, string> = {
+          'Computer Science': 'cse',
+          'Engineering': 'cse',
+          'Finance': 'bcom-regular',
+          'Law': 'ba-llb',
+          'Journalism': 'journalism',
+          'Management': 'bba',
+          'Architecture': 'b-arch',
+          'Medicine': 'mbbs'
+        };
+
+        const targetCareerIds = recommendations
+          .map(r => mapping[r])
+          .filter(Boolean);
+
+        if (targetCareerIds.length > 0) {
+          const q = query(
+            collection(db, 'colleges'),
+            where('career_id', 'in', targetCareerIds),
+            limit(6)
+          );
+          const querySnapshot = await getDocs(q);
+          const collegesData = querySnapshot.docs.map(doc => ({
+            ...(doc.data() as any),
+            id: doc.id
+          }));
+          setRecommendedColleges(collegesData);
+        }
+      } catch (error) {
+        console.error("Error fetching recommended colleges:", error);
+      } finally {
+        setLoadingColleges(false);
+      }
+    };
+
+    fetchColleges();
+  }, [recommendations]);
 
   const handleConfirmAppointment = async () => {
     if (!appointmentTime) {
-      alert("Please select a time for your appointment.");
+      setError("Please select a time for your appointment.");
       return;
     }
     
     setIsSending(true);
+    setError(null);
     try {
       const response = await fetch('/api/appointments', {
         method: 'POST',
@@ -110,7 +160,7 @@ const Result: React.FC = () => {
     } catch (error: any) {
       console.error("Failed to save appointment:", error);
       setIsSending(false);
-      alert(error.message || "Failed to book appointment. Please try again.");
+      setError(error.message || "Failed to book appointment. Please try again.");
     }
   };
 
@@ -172,7 +222,7 @@ const Result: React.FC = () => {
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#1e293b', color: '#fff' }}
                   />
                   <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
-                    {chartData.map((entry, index) => (
+                    {chartData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -207,6 +257,71 @@ const Result: React.FC = () => {
               <Calendar className="w-6 h-6" />
               Book Consultation with Vinit Bansal
             </button>
+          </div>
+
+          {/* Recommended Colleges Section */}
+          <div className="mt-20">
+            <div className="flex items-center gap-2 mb-8 justify-center">
+              <GraduationCap className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-2xl font-display font-bold text-slate-800 dark:text-white">Top Recommended Institutions</h2>
+            </div>
+
+            {loadingColleges ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : recommendedColleges.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recommendedColleges.map((college) => (
+                  <motion.div
+                    key={college.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 hover:border-indigo-500 transition-all group"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+                        <GraduationCap className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      {college.ranking && (
+                        <span className="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full uppercase tracking-wider">
+                          {college.ranking}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 line-clamp-1">{college.name}</h3>
+                    <div className="space-y-2 mb-6">
+                      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <MapPin className="w-3 h-3" />
+                        {college.location}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <Clock className="w-3 h-3" />
+                        {college.duration}
+                      </div>
+                      <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                        {college.specialization}
+                      </div>
+                    </div>
+                    {college.website && (
+                      <a 
+                        href={college.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all"
+                      >
+                        Visit Website <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700">
+                <p className="text-slate-500 dark:text-slate-400">No specific colleges found for these paths yet. Our team is updating the database.</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -316,6 +431,12 @@ const Result: React.FC = () => {
                       <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Online Video Consultation</p>
                     </div>
                   </div>
+
+                  {error && (
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-2xl text-red-600 dark:text-red-400 text-sm font-medium">
+                      {error}
+                    </div>
+                  )}
 
                   {isSent ? (
                     <motion.div 

@@ -5,12 +5,15 @@ import { CareerNode } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 import { buildTree } from '../data/defaultCareers';
 import { Filter, Search, Clock, GraduationCap, X } from 'lucide-react';
-import { CAREERS } from '../data/careers';
+import { db } from '../firebase';
+import { collection, getDocs, query } from 'firebase/firestore';
+
+import { seedDatabase } from '../services/seedService';
 
 const GraphPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<CareerNode | null>(null);
-  const [flatCareers, setFlatCareers] = useState<any[]>(CAREERS);
-  const [loading, setLoading] = useState(false);
+  const [flatCareers, setFlatCareers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,6 +21,31 @@ const GraphPage: React.FC = () => {
   const [selectedField, setSelectedField] = useState<string>('all');
   const [selectedDuration, setSelectedDuration] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [expandAllNodes, setExpandAllNodes] = useState(false);
+
+  useEffect(() => {
+    const fetchCareers = async () => {
+      setLoading(true);
+      try {
+        // Seed database if empty
+        await seedDatabase();
+
+        const q = query(collection(db, 'careers'));
+        const querySnapshot = await getDocs(q);
+        const careersData = querySnapshot.docs.map((doc) => ({
+          ...(doc.data() as any),
+          id: doc.id
+        }));
+        setFlatCareers(careersData);
+      } catch (error) {
+        console.error("Error fetching careers:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCareers();
+  }, []);
 
   useEffect(() => {
     // Reset field when stream changes
@@ -27,97 +55,99 @@ const GraphPage: React.FC = () => {
   const filteredTree = useMemo(() => {
     if (!flatCareers.length) return null;
 
-    let filtered = [...flatCareers];
+    const matchingIds = new Set<string>();
+    const hasActiveFilters = searchQuery.trim() !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all';
 
-    // 1. Filter by Search Query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchingIds = new Set<string>();
-      
-      // Find all matching nodes
-      filtered.forEach(item => {
-        if (item.name.toLowerCase().includes(query)) {
+    if (!hasActiveFilters) {
+      return buildTree(flatCareers);
+    }
+
+    // Helper to add all ancestors of a node
+    const addAncestors = (nodeId: string) => {
+      let current = flatCareers.find(c => c.id === nodeId);
+      while (current) {
+        matchingIds.add(current.id);
+        if (!current.parent_id) break;
+        current = flatCareers.find(c => c.id === current.parent_id);
+      }
+    };
+
+    // Helper to add all descendants of a node
+    const addDescendants = (nodeId: string) => {
+      flatCareers.forEach(item => {
+        if (item.parent_id === nodeId) {
           matchingIds.add(item.id);
-          // Add all ancestors to ensure they are visible
-          let current = item;
-          while (current && current.parent_id) {
-            matchingIds.add(current.parent_id);
-            current = flatCareers.find(c => c.id === current.parent_id);
-          }
+          addDescendants(item.id);
         }
       });
-      
-      filtered = flatCareers.filter(item => matchingIds.has(item.id));
-    }
+    };
 
-    // 2. Filter by Stream (Top-level branches)
-    if (selectedStream !== 'all') {
-      const matchingIds = new Set<string>();
-      matchingIds.add('root'); // Always keep root
-      matchingIds.add(selectedStream);
-      
-      // Find all descendants of the selected stream
-      const addDescendants = (parentId: string) => {
-        flatCareers.forEach(item => {
-          if (item.parent_id === parentId) {
-            matchingIds.add(item.id);
-            addDescendants(item.id);
-          }
-        });
-      };
-      addDescendants(selectedStream);
-      
-      filtered = filtered.filter(item => matchingIds.has(item.id));
-    }
+    // Apply filters
+    flatCareers.forEach(item => {
+      let matches = true;
 
-    // 2.5 Filter by Field (Sub-branches)
-    if (selectedField !== 'all') {
-      const matchingIds = new Set<string>();
-      matchingIds.add('root'); // Always keep root
-      
-      // Add ancestors of the field
-      let currentField = flatCareers.find(c => c.id === selectedField);
-      while (currentField) {
-        matchingIds.add(currentField.id);
-        currentField = flatCareers.find(c => c.id === currentField.parent_id);
+      // Search Filter
+      if (searchQuery.trim()) {
+        if (!item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          matches = false;
+        }
       }
 
-      // Find all descendants of the selected field
-      const addDescendants = (parentId: string) => {
-        flatCareers.forEach(item => {
-          if (item.parent_id === parentId) {
-            matchingIds.add(item.id);
-            addDescendants(item.id);
+      // Stream Filter
+      if (matches && selectedStream !== 'all') {
+        // If we are filtering by stream, we want to see nodes in that stream
+        // A node matches if it is the stream itself OR if its top-level ancestor is the stream
+        let isChildOfStream = false;
+        let current = item;
+        while (current) {
+          if (current.id === selectedStream) {
+            isChildOfStream = true;
+            break;
           }
-        });
-      };
-      addDescendants(selectedField);
-      
-      filtered = filtered.filter(item => matchingIds.has(item.id));
-    }
-
-    // 3. Filter by Duration (Leaf nodes)
-    if (selectedDuration !== 'all') {
-      const matchingIds = new Set<string>();
-      matchingIds.add('root'); // Always keep root
-      
-      filtered.forEach(item => {
-        if (item.is_leaf && item.duration && item.duration.includes(selectedDuration)) {
-          matchingIds.add(item.id);
-          // Add all ancestors
-          let current = item;
-          while (current && current.parent_id) {
-            matchingIds.add(current.parent_id);
-            current = flatCareers.find(c => c.id === current.parent_id);
-          }
+          current = flatCareers.find(c => c.id === current.parent_id);
         }
-      });
-      
-      filtered = filtered.filter(item => matchingIds.has(item.id));
+        if (!isChildOfStream) matches = false;
+      }
+
+      // Field Filter
+      if (matches && selectedField !== 'all') {
+        let isChildOfField = false;
+        let current = item;
+        while (current) {
+          if (current.id === selectedField) {
+            isChildOfField = true;
+            break;
+          }
+          current = flatCareers.find(c => c.id === current.parent_id);
+        }
+        if (!isChildOfField) matches = false;
+      }
+
+      // Duration Filter
+      if (matches && selectedDuration !== 'all') {
+        if (!(item.is_leaf && item.duration && item.duration.includes(selectedDuration))) {
+          matches = false;
+        }
+      }
+
+      if (matches) {
+        addAncestors(item.id);
+        // If it's a branch (not a leaf), we might want to show its children too?
+        // Usually, if I search for "Engineering", I want to see all engineering branches.
+        if (!item.is_leaf) {
+          addDescendants(item.id);
+        }
+      }
+    });
+
+    // Always ensure root is there if we have any matches
+    if (matchingIds.size > 0) {
+      matchingIds.add('root');
     }
 
+    const filtered = flatCareers.filter(item => matchingIds.has(item.id));
     return buildTree(filtered);
-  }, [flatCareers, searchQuery, selectedStream, selectedDuration]);
+  }, [flatCareers, searchQuery, selectedStream, selectedField, selectedDuration]);
 
   const streams = useMemo(() => {
     return flatCareers.filter(c => c.parent_id === 'root');
@@ -143,6 +173,24 @@ const GraphPage: React.FC = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      {/* Massive Background Typography (Recipe 2) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none">
+        <motion.div
+          initial={{ opacity: 0, scale: 1.2, skewX: -10 }}
+          animate={{ opacity: 0.05, scale: 1, skewX: -10 }}
+          transition={{ duration: 2, ease: "easeOut" }}
+          className="text-[25vw] font-display font-bold leading-none tracking-tighter text-slate-900 dark:text-white uppercase"
+        >
+          Explore
+        </motion.div>
+      </div>
+
+      {/* Atmospheric Background (Recipe 7) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 dark:bg-indigo-500/20 blur-[150px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/10 dark:bg-emerald-500/20 blur-[150px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
       {/* Filter Controls Overlay */}
       <div className="absolute top-6 left-6 z-50 flex flex-col gap-4 max-w-md w-full pointer-events-none">
         <div className="flex gap-2 pointer-events-auto">
@@ -161,6 +209,12 @@ const GraphPage: React.FC = () => {
             className={`p-3 rounded-2xl backdrop-blur-xl border transition-all shadow-xl ${showFilters ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`}
           >
             <Filter className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={() => setExpandAllNodes(!expandAllNodes)}
+            className={`px-4 py-3 rounded-2xl backdrop-blur-xl border transition-all shadow-xl text-xs font-bold uppercase tracking-widest ${expandAllNodes ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`}
+          >
+            {expandAllNodes ? 'Collapse' : 'Expand All'}
           </button>
         </div>
 
@@ -259,6 +313,7 @@ const GraphPage: React.FC = () => {
                   setSelectedStream('all');
                   setSelectedField('all');
                   setSelectedDuration('all');
+                  setExpandAllNodes(false);
                 }}
                 className="w-full py-2 text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-widest"
               >
@@ -273,7 +328,7 @@ const GraphPage: React.FC = () => {
         <Graph 
           data={filteredTree} 
           onNodeClick={(node) => setSelectedNode(node)} 
-          expandAll={searchQuery !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all'}
+          expandAll={expandAllNodes || searchQuery !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all'}
         />
       ) : (
         <div className="w-full h-screen flex items-center justify-center">
@@ -301,6 +356,7 @@ const GraphPage: React.FC = () => {
           <SidePanel 
             node={selectedNode} 
             onClose={() => setSelectedNode(null)} 
+            flatCareers={flatCareers}
           />
         )}
       </AnimatePresence>

@@ -1,203 +1,549 @@
 import { CareerNode } from '../types';
 
 export const DEFAULT_CAREERS_FLAT = [
-  { id: 'root', name: 'Careers', type: 'root', parent_id: null, is_leaf: 0 },
+  { 
+    id: 'root', 
+    name: 'Careers', 
+    type: 'root', 
+    parent_id: null, 
+    is_leaf: false,
+    description: 'The starting point of your career journey after 10th Standard. Explore various streams and specialized paths.',
+    job_roles: 'Student, Learner, Explorer'
+  },
   
   // I. Biology
-  { id: 'biology', name: 'Biology Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
+  { 
+    id: 'biology', 
+    name: 'Biology Stream', 
+    type: 'branch', 
+    parent_id: 'root', 
+    is_leaf: false,
+    description: 'Ideal for students interested in life sciences, medicine, and healthcare. This stream opens paths to becoming a doctor, nurse, or researcher.',
+    job_roles: 'Medical Professional, Researcher, Healthcare Specialist'
+  },
   
   // 1. Medical courses (5 years)
-  { id: 'medical-courses', name: 'Medical Courses (5 Years)', type: 'branch', parent_id: 'biology', is_leaf: 0 },
-  { id: 'mbbs', name: 'MBBS - Allopathy', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bums', name: 'BUMS - Unani', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bhms', name: 'BHMS - Homeopathy', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bams', name: 'BAMS - Ayurveda', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bsms', name: 'BSMS - Siddha', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bnys', name: 'BNYS - Naturopathy', type: 'leaf', parent_id: 'medical-courses', duration: '5.5 years', is_leaf: 1 },
-  { id: 'bds', name: 'BDS - Dental', type: 'leaf', parent_id: 'medical-courses', duration: '5 years', is_leaf: 1 },
-  { id: 'bvsc', name: 'BVSc - Veterinary', type: 'leaf', parent_id: 'medical-courses', duration: '5 years', is_leaf: 1 },
-  { id: 'bpt', name: 'BPT - Physiotherapy', type: 'leaf', parent_id: 'medical-courses', duration: '4.5 years', is_leaf: 1 },
+  { 
+    id: 'medical-courses', 
+    name: 'Medical Courses (5 Years)', 
+    type: 'branch', 
+    parent_id: 'biology', 
+    is_leaf: false,
+    description: 'Professional degree courses in various systems of medicine. These are typically 5 to 5.5 years long including internship.',
+    job_roles: 'Doctor, Surgeon, Medical Consultant'
+  },
+  { 
+    id: 'mbbs', 
+    name: 'MBBS - Allopathy', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Medicine and Bachelor of Surgery. The most sought-after medical degree in India for practicing modern medicine.',
+    job_roles: 'General Physician, Surgeon, Medical Officer, Specialist Doctor'
+  },
+  { 
+    id: 'bums', 
+    name: 'BUMS - Unani', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Unani Medicine and Surgery. Focuses on the Unani system of medicine based on the teachings of Greek physicians.',
+    job_roles: 'Unani Doctor, Hakim, Medical Officer'
+  },
+  { 
+    id: 'bhms', 
+    name: 'BHMS - Homeopathy', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Homeopathic Medicine and Surgery. A holistic system of medicine based on the principle of "like cures like".',
+    job_roles: 'Homeopathic Doctor, Consultant, Medical Officer'
+  },
+  { 
+    id: 'bams', 
+    name: 'BAMS - Ayurveda', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Ayurvedic Medicine and Surgery. An ancient Indian system of medicine focusing on balance in bodily systems.',
+    job_roles: 'Ayurvedic Doctor, Vaidya, Medical Officer'
+  },
+  { 
+    id: 'bsms', 
+    name: 'BSMS - Siddha', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Siddha Medicine and Surgery. One of the oldest systems of medicine, originating in South India.',
+    job_roles: 'Siddha Practitioner, Medical Officer'
+  },
+  { 
+    id: 'bnys', 
+    name: 'BNYS - Naturopathy', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Naturopathy and Yogic Sciences. Focuses on natural healing and yoga for health and wellness.',
+    job_roles: 'Naturopath, Yoga Therapist, Wellness Consultant'
+  },
+  { 
+    id: 'bds', 
+    name: 'BDS - Dental', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Dental Surgery. Focuses on oral health, diagnosis, and treatment of dental issues.',
+    job_roles: 'Dentist, Orthodontist, Oral Surgeon'
+  },
+  { 
+    id: 'bvsc', 
+    name: 'BVSc - Veterinary', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Veterinary Science. Focuses on the health and well-being of animals and livestock.',
+    job_roles: 'Veterinarian, Animal Surgeon, Veterinary Consultant'
+  },
+  { 
+    id: 'bpt', 
+    name: 'BPT - Physiotherapy', 
+    type: 'leaf', 
+    parent_id: 'medical-courses', 
+    duration: '4.5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Physiotherapy. Focuses on physical movement and rehabilitation through exercise and manual therapy.',
+    job_roles: 'Physiotherapist, Sports Therapist, Rehabilitation Specialist'
+  },
 
   // 2. Allied Health Paramedical (2/3/4 years)
-  { id: 'allied-health', name: 'Allied Health Paramedical', type: 'branch', parent_id: 'biology', is_leaf: 0 },
-  { id: 'b-pharma', name: 'B. Pharma', type: 'leaf', parent_id: 'allied-health', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-nursing', name: 'B.Sc - Nursing', type: 'leaf', parent_id: 'allied-health', duration: '4 years', is_leaf: 1 },
-  { id: 'bot', name: 'BOT - Occupational Therapy', type: 'leaf', parent_id: 'allied-health', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-anesthesia', name: 'B.Sc - Anesthesia Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-cath-lab', name: 'B.Sc - Cath Lab Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-cardiac', name: 'B.Sc - Cardiac Care Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-optometry', name: 'B.Sc - Clinical Optometry', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-imaging', name: 'B.Sc - Imaging Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-med-lab', name: 'B.Sc - Medical Lab Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-nuclear', name: 'B.Sc - Nuclear Medicine', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-ot', name: 'B.Sc - Operation Theatre', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-perfusion', name: 'B.Sc - Perfusion Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-physician-asst', name: 'B.Sc - Physician Assistant', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-radiotherapy', name: 'B.Sc - Radiotherapy Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-renal', name: 'B.Sc - Renal Dialysis Tech', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-respiratory', name: 'B.Sc - Respiratory Care', type: 'leaf', parent_id: 'allied-health', duration: '3 years', is_leaf: 1 },
-
-  // 3. Paramedical Courses
-  { id: 'paramedical-courses', name: 'Paramedical Courses', type: 'branch', parent_id: 'biology', is_leaf: 0 },
-  { id: 'dialysis-tech', name: 'Dialysis Technician', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'med-lab-ecg', name: 'Med Lab & ECG Technician', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'dental-tech', name: 'Dental Technician', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'med-records-tech', name: 'Medical Records Tech', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'xray-tech', name: 'X-Ray Technician', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'ophthalmic-asst', name: 'Ophthalmic Assistant', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
-  { id: 'ot-tech', name: 'Operation Theatre Technician', type: 'leaf', parent_id: 'paramedical-courses', duration: '2 years', is_leaf: 1 },
+  { 
+    id: 'allied-health', 
+    name: 'Allied Health Paramedical', 
+    type: 'branch', 
+    parent_id: 'biology', 
+    is_leaf: false,
+    description: 'Supportive healthcare roles that assist in diagnosis and treatment using specialized technology and techniques.',
+    job_roles: 'Medical Technician, Lab Specialist, Healthcare Assistant'
+  },
+  { 
+    id: 'b-pharma', 
+    name: 'B. Pharma', 
+    type: 'leaf', 
+    parent_id: 'allied-health', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Bachelor of Pharmacy. Focuses on pharmaceutical sciences, drug manufacturing, and dispensing.',
+    job_roles: 'Pharmacist, Drug Inspector, Pharmaceutical Researcher'
+  },
+  { 
+    id: 'bsc-nursing', 
+    name: 'B.Sc - Nursing', 
+    type: 'leaf', 
+    parent_id: 'allied-health', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Bachelor of Science in Nursing. Focuses on patient care, clinical practice, and healthcare management.',
+    job_roles: 'Registered Nurse, Nurse Educator, Clinical Specialist'
+  },
 
   // II. Maths
-  { id: 'maths', name: 'Maths Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'b-arch', name: 'B. Architecture', type: 'leaf', parent_id: 'maths', duration: '5 years', is_leaf: 1 },
+  { 
+    id: 'maths', 
+    name: 'Maths Stream', 
+    type: 'branch', 
+    parent_id: 'root', 
+    is_leaf: false,
+    description: 'For students with strong analytical and problem-solving skills. Opens doors to engineering, architecture, and pure sciences.',
+    job_roles: 'Engineer, Architect, Data Scientist, Researcher'
+  },
+  { 
+    id: 'b-arch', 
+    name: 'B. Architecture', 
+    type: 'leaf', 
+    parent_id: 'maths', 
+    duration: '5 years', 
+    is_leaf: true,
+    description: 'Bachelor of Architecture. Focuses on design, planning, and construction of buildings and structures.',
+    job_roles: 'Architect, Urban Planner, Interior Designer'
+  },
   
   // Engineering
-  { id: 'engineering', name: 'Engineering (B.Tech/BE)', type: 'branch', parent_id: 'maths', is_leaf: 0 },
-  { id: 'aeronautical', name: 'Aeronautical Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'aerospace', name: 'Aerospace Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'agricultural-eng', name: 'Agricultural Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'automobile', name: 'Automobile Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'automation-robotics', name: 'Automation & Robotics Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'avionics-eng', name: 'Avionics Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'biomedical-eng', name: 'Bio Medical Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'biotech-eng', name: 'Bio Technology Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'civil-eng', name: 'Civil Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'chemical-eng', name: 'Chemical Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'ceramic-eng', name: 'Ceramic Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'cse', name: 'Computer Science Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'construction-tech', name: 'Construction Tech Mngt', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'ece', name: 'Electronics & Comm Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'eee', name: 'Electrical & Electronics Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'info-science', name: 'Information Science Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'industrial-eng', name: 'Industrial Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'industrial-prod', name: 'Industrial Production Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'instrumentation', name: 'Instrumentation Technology', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'marine-eng', name: 'Marine Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'med-electronics', name: 'Medical Electronics Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'mech', name: 'Mechanical Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'mining-eng', name: 'Mining Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'mfg-science', name: 'Manufacturing Science Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'naval-arch', name: 'Naval Architecture', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'polymer-tech', name: 'Polymer Technology', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'silk-tech', name: 'Silk Technology Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'carpet-tech', name: 'Carpet Technology Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-  { id: 'textile-eng', name: 'Textile Engineering', type: 'leaf', parent_id: 'engineering', duration: '4 years', is_leaf: 1 },
-
-  // Other Maths Paths
-  { id: 'maths-special', name: 'Specialized Programs', type: 'branch', parent_id: 'maths', is_leaf: 0 },
-  { id: 'bs-ms-dual', name: 'BS + MS Dual Degree Program', type: 'leaf', parent_id: 'maths-special', duration: '5 years', is_leaf: 1 },
-  { id: 'ipgdm-iim', name: 'IPGDM – IIM, Indore', type: 'leaf', parent_id: 'maths-special', duration: '5 years', is_leaf: 1 },
-  { id: 'ma-iit', name: 'Master of Arts (MA)-IIT, Madras', type: 'leaf', parent_id: 'maths-special', duration: '5 years', is_leaf: 1 },
-  { id: 'ms-astronomy', name: 'MS – Astronomy & Astrophysics', type: 'leaf', parent_id: 'maths-special', duration: '2 years', is_leaf: 1 },
-  { id: 'msc-applied', name: 'M.Sc. – Applied Physics/Maths', type: 'leaf', parent_id: 'maths-special', duration: '2 years', is_leaf: 1 },
-  { id: 'mtech-cs', name: 'M.Tech – Computer Science', type: 'leaf', parent_id: 'maths-special', duration: '2 years', is_leaf: 1 },
-  { id: 'pharma-ba-bed', name: 'Pharma Course – BA + B.Ed', type: 'leaf', parent_id: 'maths-special', duration: '4 years', is_leaf: 1 },
-  { id: 'teaching-bsc-bed', name: 'Teaching Course – B.Sc + B.Ed', type: 'leaf', parent_id: 'maths-special', duration: '4 years', is_leaf: 1 },
+  { 
+    id: 'engineering', 
+    name: 'Engineering (B.Tech/BE)', 
+    type: 'branch', 
+    parent_id: 'maths', 
+    is_leaf: false,
+    description: 'Technical degree focusing on the application of scientific and mathematical principles to solve real-world problems.',
+    job_roles: 'Software Engineer, Civil Engineer, Mechanical Engineer'
+  },
+  { 
+    id: 'cse', 
+    name: 'Computer Science Engineering', 
+    type: 'leaf', 
+    parent_id: 'engineering', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Focuses on computer systems, software development, algorithms, and artificial intelligence.',
+    job_roles: 'Software Developer, Systems Architect, AI Engineer, Data Scientist'
+  },
+  { 
+    id: 'mech-eng', 
+    name: 'Mechanical Engineering', 
+    type: 'leaf', 
+    parent_id: 'engineering', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Focuses on the design, analysis, and manufacturing of mechanical systems.',
+    job_roles: 'Mechanical Engineer, Design Engineer, Production Manager'
+  },
+  { 
+    id: 'civil-eng', 
+    name: 'Civil Engineering', 
+    type: 'leaf', 
+    parent_id: 'engineering', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Focuses on the design and construction of infrastructure like buildings, roads, and bridges.',
+    job_roles: 'Civil Engineer, Site Engineer, Structural Designer'
+  },
+  { 
+    id: 'elec-eng', 
+    name: 'Electrical Engineering', 
+    type: 'leaf', 
+    parent_id: 'engineering', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Focuses on electrical systems, power generation, and distribution.',
+    job_roles: 'Electrical Engineer, Power Systems Engineer'
+  },
+  { 
+    id: 'ece-eng', 
+    name: 'Electronics & Comm Engineering', 
+    type: 'leaf', 
+    parent_id: 'engineering', 
+    duration: '4 years', 
+    is_leaf: true,
+    description: 'Focuses on electronic circuits, communication systems, and signal processing.',
+    job_roles: 'Electronics Engineer, Network Engineer'
+  },
 
   // III. Humanities Courses (3 Years)
-  { id: 'humanities', name: 'Humanities Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'advertising', name: 'Advertising', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'criminology', name: 'Criminology', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'economics', name: 'Economics', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'fine-arts', name: 'Fine Arts', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'foreign-langs', name: 'Foreign Languages', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'home-science', name: 'Home Science', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'interior-design', name: 'Interior Design', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'journalism', name: 'Journalism', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'library-science', name: 'Library Science', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'literature', name: 'Literature', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'physical-ed', name: 'Physical Education', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'pol-science', name: 'Political Science', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'psychology', name: 'Psychology', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'social-work', name: 'Social Work', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'sociology', name: 'Sociology', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
-  { id: 'travel-tourism', name: 'Travel and Tourism', type: 'leaf', parent_id: 'humanities', duration: '3 years', is_leaf: 1 },
+  { 
+    id: 'humanities', 
+    name: 'Humanities Stream', 
+    type: 'branch', 
+    parent_id: 'root', 
+    is_leaf: false,
+    description: 'Focuses on human society, culture, and creative expression. Ideal for those interested in social sciences, arts, and communication.',
+    job_roles: 'Social Worker, Journalist, Psychologist, Educator'
+  },
+  { 
+    id: 'psychology', 
+    name: 'Psychology', 
+    type: 'leaf', 
+    parent_id: 'humanities', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'The scientific study of the human mind and behavior. Opens paths to counseling, clinical practice, and human resources.',
+    job_roles: 'Counselor, Clinical Psychologist, HR Specialist'
+  },
+  { 
+    id: 'economics', 
+    name: 'Economics', 
+    type: 'leaf', 
+    parent_id: 'humanities', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Study of production, distribution, and consumption of goods and services. Highly analytical and versatile.',
+    job_roles: 'Economist, Data Analyst, Financial Consultant'
+  },
+  { 
+    id: 'journalism', 
+    name: 'Journalism & Mass Comm', 
+    type: 'leaf', 
+    parent_id: 'humanities', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Focuses on news reporting, media production, and public communication.',
+    job_roles: 'Journalist, News Anchor, PR Specialist, Content Creator'
+  },
+  { 
+    id: 'ba-llb', 
+    name: 'Integrated Law (BA LLB)', 
+    type: 'leaf', 
+    parent_id: 'humanities', 
+    duration: '5 years', 
+    is_leaf: true,
+    description: 'A 5-year integrated law degree combining humanities subjects with legal studies.',
+    job_roles: 'Lawyer, Legal Consultant, Corporate Counsel'
+  },
+
+  // Pure Sciences
+  {
+    id: 'pure-sciences',
+    name: 'Pure Sciences (B.Sc)',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'Focuses on fundamental scientific research and theoretical knowledge in Physics, Chemistry, and Maths.',
+    job_roles: 'Researcher, Scientist, Professor'
+  },
+  {
+    id: 'bsc-physics',
+    name: 'B.Sc Physics',
+    type: 'leaf',
+    parent_id: 'pure-sciences',
+    duration: '3 years',
+    is_leaf: true,
+    description: 'Study of matter, energy, and the fundamental laws of the universe.',
+    job_roles: 'Physicist, Research Assistant, Lab Technician'
+  },
+  {
+    id: 'bsc-maths',
+    name: 'B.Sc Mathematics',
+    type: 'leaf',
+    parent_id: 'pure-sciences',
+    duration: '3 years',
+    is_leaf: true,
+    description: 'Advanced study of mathematical theories, logic, and computation.',
+    job_roles: 'Mathematician, Statistician, Actuary'
+  },
 
   // IV. Management Courses (1/2/3 years)
-  { id: 'management', name: 'Management Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'aviation-mgmt', name: 'Aviation Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'business-mgmt', name: 'Business Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'event-mgmt', name: 'Event Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'export-mgmt', name: 'Export Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'finance-mgmt', name: 'Finance Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'hospital-mgmt', name: 'Hospital Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'hotel-mgmt', name: 'Hotel Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'hr-mgmt', name: 'Human Resource Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'logistics-mgmt', name: 'Logistics Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'marketing-mgmt', name: 'Marketing Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'operations-mgmt', name: 'Operations Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'retail-mgmt', name: 'Retail Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'sales-mgmt', name: 'Sales Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
-  { id: 'tech-mgmt', name: 'Technology Management', type: 'leaf', parent_id: 'management', duration: '1-3 years', is_leaf: 1 },
+  { 
+    id: 'management', 
+    name: 'Management Stream', 
+    type: 'branch', 
+    parent_id: 'root', 
+    is_leaf: false,
+    description: 'Focuses on business operations, leadership, and organizational management. Ideal for future business leaders and entrepreneurs.',
+    job_roles: 'Business Manager, Entrepreneur, Management Consultant'
+  },
+  { 
+    id: 'bba', 
+    name: 'BBA - Bachelors in Business Administration', 
+    type: 'leaf', 
+    parent_id: 'management', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Foundational business degree covering marketing, finance, and human resources. Provides a broad understanding of how businesses operate.',
+    job_roles: 'Business Analyst, Marketing Executive, Operations Manager'
+  },
+  { 
+    id: 'bms', 
+    name: 'BMS - Bachelor of Management Studies', 
+    type: 'leaf', 
+    parent_id: 'management', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Focuses on management skills and business knowledge. Similar to BBA but often with a more theoretical approach.',
+    job_roles: 'Management Trainee, Project Coordinator, HR Assistant'
+  },
 
   // V. Commerce Courses (3 years)
-  { id: 'commerce', name: 'Commerce Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'cma', name: 'CMA - Cost Management Accountant', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'cs', name: 'CS - Company Secretary', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bcom-regular', name: 'B.Com. – Regular', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bcom-tax', name: 'B.Com. – Taxation and Tax Procedure', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bcom-tourism', name: 'B.Com. – Travel & Tourism', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bcom-bank', name: 'B.Com. – Bank Management', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bcom-prof', name: 'B.Com. – Professional', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bba', name: 'BBA - Bachelors in Business Administration', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bbm', name: 'BBM - Bachelors in Business Management', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bfm', name: 'BFM - Bachelors in Financial Markets', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bms', name: 'BMS - Bachelors in Management Studies', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'baf', name: 'BAF - Bachelors in Accounting and Finance', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bms-sci', name: 'BMS - Bachelors in Management Science', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bht', name: 'BHT - Bachelors in Hotel and Tourism', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
-  { id: 'bca', name: 'BCA - Bachelors in Computer Applications', type: 'leaf', parent_id: 'commerce', duration: '3 years', is_leaf: 1 },
+  { 
+    id: 'commerce', 
+    name: 'Commerce Stream', 
+    type: 'branch', 
+    parent_id: 'root', 
+    is_leaf: false,
+    description: 'Focuses on trade, finance, accounting, and business laws. A versatile stream with many professional opportunities.',
+    job_roles: 'Accountant, Financial Analyst, Tax Consultant'
+  },
+  { 
+    id: 'bcom-regular', 
+    name: 'B.Com (Regular)', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Traditional degree in commerce covering accounting, economics, and business law.',
+    job_roles: 'Accountant, Bank Officer, Office Administrator'
+  },
+  { 
+    id: 'bcom-honours', 
+    name: 'B.Com (Honours)', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'A more specialized and rigorous version of the B.Com degree, focusing on advanced accounting and finance.',
+    job_roles: 'Financial Analyst, Auditor, Investment Banker'
+  },
+  { 
+    id: 'ca-root', 
+    name: 'Chartered Accountancy (CA)', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '4-5 years', 
+    is_leaf: true,
+    description: 'Professional course in accounting, auditing, and taxation. Highly prestigious and globally recognized.',
+    job_roles: 'Chartered Accountant, Auditor, Tax Specialist'
+  },
+  { 
+    id: 'cs-root', 
+    name: 'Company Secretary (CS)', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '3-4 years', 
+    is_leaf: true,
+    description: 'Focuses on corporate law, governance, and compliance. Essential for large corporations.',
+    job_roles: 'Company Secretary, Legal Advisor, Compliance Officer'
+  },
+  { 
+    id: 'cma-root', 
+    name: 'Cost & Management Accountancy', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '3-4 years', 
+    is_leaf: true,
+    description: 'Focuses on cost management, auditing, and financial planning.',
+    job_roles: 'Cost Accountant, Financial Controller'
+  },
+  { 
+    id: 'banking', 
+    name: 'Banking & Insurance', 
+    type: 'leaf', 
+    parent_id: 'commerce', 
+    duration: '3 years', 
+    is_leaf: true,
+    description: 'Focuses on financial services, banking operations, and risk management.',
+    job_roles: 'Bank Manager, Insurance Underwriter'
+  },
+  
+  // VI. Creative & Professional
+  {
+    id: 'creative-arts',
+    name: 'Creative & Design',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'For students with a passion for art, design, and creative expression.',
+    job_roles: 'Designer, Artist, Creative Director'
+  },
+  {
+    id: 'b-design',
+    name: 'B. Design (B.Des)',
+    type: 'leaf',
+    parent_id: 'creative-arts',
+    duration: '4 years',
+    is_leaf: true,
+    description: 'Professional degree in various design fields like fashion, interior, product, or graphic design.',
+    job_roles: 'Fashion Designer, UX Designer, Product Designer'
+  },
+  {
+    id: 'fine-arts',
+    name: 'Bachelor of Fine Arts (BFA)',
+    type: 'leaf',
+    parent_id: 'creative-arts',
+    duration: '4 years',
+    is_leaf: true,
+    description: 'Focuses on visual arts like painting, sculpture, and photography.',
+    job_roles: 'Visual Artist, Photographer, Art Teacher'
+  },
 
-  // VI. UG Courses (3/4 years)
-  { id: 'ug-courses', name: 'UG Courses (B.Sc)', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'bsc-aircraft', name: 'B.Sc - Aircraft Maintenance', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-agri', name: 'B.Sc - Agriculture', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-anthro', name: 'B.Sc - Anthropology', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-avionics', name: 'B.Sc - Avionics', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-botany', name: 'B.Sc - Botany', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-chem', name: 'B.Sc - Chemistry', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-comp', name: 'B.Sc - Computer', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-dairy', name: 'B.Sc - Dairy Technology', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-diet', name: 'B.Sc - Dietician and Nutrition', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-econ', name: 'B.Sc - Economics', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-media', name: 'B.Sc - Electronic Media', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-fishery', name: 'B.Sc - Fishery Science', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-food', name: 'B.Sc - Food Technology', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-forensic', name: 'B.Sc - Forensic', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-forestry', name: 'B.Sc - Forestry', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-home-sci', name: 'B.Sc - Home Science', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-horti', name: 'B.Sc - Horticulture', type: 'leaf', parent_id: 'ug-courses', duration: '4 years', is_leaf: 1 },
-  { id: 'bsc-hospitality', name: 'B.Sc - Hospitality', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-hotel', name: 'B.Sc - Hotel Management', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-mass-comm', name: 'B.Sc - Mass Communication', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-maths', name: 'B.Sc – Mathematics', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-maritime', name: 'B.Sc – Maritime Science', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-meteo', name: 'B.Sc - Meteorology', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-multi', name: 'B.Sc - Multimedia', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-nautical', name: 'B.Sc - Nautical Science', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-ocean', name: 'B.Sc - Oceanography', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-phys', name: 'B.Sc - Physics', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-stats', name: 'B.Sc - Statistics', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
-  { id: 'bsc-zoo', name: 'B.Sc - Zoology', type: 'leaf', parent_id: 'ug-courses', duration: '3 years', is_leaf: 1 },
+  // VII. Hospitality & Services
+  {
+    id: 'hospitality',
+    name: 'Hospitality & Travel',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'Focuses on the service industry, including hotels, tourism, and event management.',
+    job_roles: 'Hotel Manager, Travel Consultant, Event Planner'
+  },
+  {
+    id: 'hotel-mgmt',
+    name: 'Hotel Management (BHM)',
+    type: 'leaf',
+    parent_id: 'hospitality',
+    duration: '3-4 years',
+    is_leaf: true,
+    description: 'Professional degree in hospitality and hotel administration.',
+    job_roles: 'Hotel Manager, Front Office Executive, F&B Manager'
+  },
+  {
+    id: 'travel-tourism',
+    name: 'Travel & Tourism',
+    type: 'leaf',
+    parent_id: 'hospitality',
+    duration: '3 years',
+    is_leaf: true,
+    description: 'Focuses on the tourism industry, travel planning, and destination management.',
+    job_roles: 'Travel Agent, Tour Guide, Tourism Officer'
+  },
 
-  // Less Travelled Path
-  { id: 'less-travelled', name: 'Less Travelled Paths', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'b-design', name: 'Bachelors in Design', type: 'leaf', parent_id: 'less-travelled', duration: '4 years', is_leaf: 1 },
-  { id: 'b-maths', name: 'Bachelors in Maths', type: 'leaf', parent_id: 'less-travelled', duration: '3 years', is_leaf: 1 },
-  { id: 'b-stats', name: 'Bachelors in Stats', type: 'leaf', parent_id: 'less-travelled', duration: '3 years', is_leaf: 1 },
-  { id: 'b-social-work', name: 'Bachelors in Social Work', type: 'leaf', parent_id: 'less-travelled', duration: '3 years', is_leaf: 1 },
-  { id: 'b-ped', name: 'Bachelors in P.Ed', type: 'leaf', parent_id: 'less-travelled', duration: '3 years', is_leaf: 1 },
-  { id: 'b-fine-arts', name: 'Bachelors in Fine Arts', type: 'leaf', parent_id: 'less-travelled', duration: '4 years', is_leaf: 1 },
+  // VIII. Computer Applications
+  {
+    id: 'it-software',
+    name: 'IT & Software',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'Focuses on computer applications, software development, and information technology.',
+    job_roles: 'Software Developer, Web Designer, IT Consultant'
+  },
+  {
+    id: 'bca',
+    name: 'BCA - Computer Applications',
+    type: 'leaf',
+    parent_id: 'it-software',
+    duration: '3 years',
+    is_leaf: true,
+    description: 'Bachelor of Computer Applications. Focuses on software development and computer fundamentals.',
+    job_roles: 'Web Developer, Software Tester, System Admin'
+  },
 
-  // VII. Law Courses (3/5 years)
-  { id: 'law', name: 'Law Stream', type: 'branch', parent_id: 'root', is_leaf: 0 },
-  { id: 'ba-llb', name: 'BA + LLB', type: 'leaf', parent_id: 'law', duration: '5 years', is_leaf: 1 },
-  { id: 'bcom-llb', name: 'B.Com. + LLB', type: 'leaf', parent_id: 'law', duration: '5 years', is_leaf: 1 },
-  { id: 'bbm-llb', name: 'BBM + LLB', type: 'leaf', parent_id: 'law', duration: '5 years', is_leaf: 1 },
-  { id: 'bba-llb', name: 'BBA + LLB', type: 'leaf', parent_id: 'law', duration: '5 years', is_leaf: 1 },
+  // IX. Agriculture & Environment
+  {
+    id: 'agri-science',
+    name: 'Agriculture Science',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'Focuses on farming, crop production, and agricultural technology.',
+    job_roles: 'Agricultural Scientist, Farm Manager, Agronomist'
+  },
+  {
+    id: 'bsc-agri',
+    name: 'B.Sc Agriculture',
+    type: 'leaf',
+    parent_id: 'agri-science',
+    duration: '4 years',
+    is_leaf: true,
+    description: 'Scientific study of agriculture and related fields.',
+    job_roles: 'Agriculture Officer, Research Assistant'
+  },
 
-  // VIII. C.A.
-  { id: 'ca-root', name: 'Chartered Accountancy (CA)', type: 'leaf', parent_id: 'root', duration: '4-5 years', is_leaf: 1 },
+  // X. Media & Communication
+  {
+    id: 'media-comm',
+    name: 'Media & Advertising',
+    type: 'branch',
+    parent_id: 'root',
+    is_leaf: false,
+    description: 'Focuses on mass communication, advertising, and public relations.',
+    job_roles: 'Copywriter, Media Planner, PR Executive'
+  },
+  {
+    id: 'advertising',
+    name: 'Advertising & PR',
+    type: 'leaf',
+    parent_id: 'media-comm',
+    duration: '3 years',
+    is_leaf: true,
+    description: 'Focuses on brand communication and public relations.',
+    job_roles: 'Ad Executive, PR Consultant'
+  }
 ];
 
 export const DEFAULT_UNIVERSITIES: Record<string, any[]> = {
@@ -288,6 +634,16 @@ export const DEFAULT_UNIVERSITIES: Record<string, any[]> = {
     { name: 'AJK MCRC, Jamia', location: 'New Delhi, India', fees: '₹80,000/year', duration: '2 years (MA)', ranking: 'Govt - Top Tier', specialization: 'Mass Comm', website: 'https://www.jmi.ac.in' },
     { name: 'Asian College of Journalism (ACJ)', location: 'Chennai, India', fees: '₹4,60,000/year', duration: '1 year', ranking: 'Private - Top Tier', specialization: 'Journalism', website: 'https://www.asianmedia.org' },
     { name: 'Columbia Journalism School', location: 'New York, USA', fees: '$70,000/year', duration: '1 year (MS)', ranking: 'Global #1', specialization: 'Journalism', website: 'https://journalism.columbia.edu' }
+  ],
+  'mech-eng': [
+    { name: 'IIT Madras', location: 'Chennai, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #1', specialization: 'Mechanical', website: 'https://www.iitm.ac.in' },
+    { name: 'IIT Kanpur', location: 'Kanpur, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #4', specialization: 'Mechanical', website: 'https://www.iitk.ac.in' },
+    { name: 'ETH Zurich', location: 'Zurich, Switzerland', fees: 'CHF 1,500/year', duration: '3 years', ranking: 'Global #1', specialization: 'Mechanical', website: 'https://ethz.ch' }
+  ],
+  'civil-eng': [
+    { name: 'IIT Roorkee', location: 'Roorkee, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #1', specialization: 'Civil', website: 'https://www.iitr.ac.in' },
+    { name: 'IIT Delhi', location: 'New Delhi, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - NIRF #2', specialization: 'Civil', website: 'https://www.iitd.ac.in' },
+    { name: 'Delft University of Technology', location: 'Delft, Netherlands', fees: '€15,000/year', duration: '3 years', ranking: 'Global #2', specialization: 'Civil', website: 'https://www.tudelft.nl' }
   ],
   'bsc-agri': [
     { name: 'IARI Delhi', location: 'New Delhi, India', fees: '₹10,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Agriculture', website: 'https://www.iari.res.in' },
