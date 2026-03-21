@@ -18,14 +18,16 @@ const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
 
 // Initialize files if they don't exist
 const initializeData = async () => {
+  console.log("[Server] Initializing data files...");
   if (!existsSync(CAREERS_FILE)) {
-    // We'll import the default careers from the source if possible, or just use a placeholder
-    // For now, let's use a simple placeholder or wait for the first save
+    console.log("[Server] Creating careers.json");
     writeFileSync(CAREERS_FILE, JSON.stringify([], null, 2));
   }
   if (!existsSync(APPOINTMENTS_FILE)) {
+    console.log("[Server] Creating appointments.json");
     writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
   }
+  console.log("[Server] Data files initialized");
 };
 
 initializeData();
@@ -152,6 +154,11 @@ export async function createServer() {
   app.post("/api/careers", async (req, res) => {
     try {
       const careers = req.body;
+      console.log(`[API] POST /api/careers - body type: ${typeof careers}, isArray: ${Array.isArray(careers)}`);
+      console.log(`[API] POST /api/careers - received ${Array.isArray(careers) ? careers.length : 'non-array'} items`);
+      if (!Array.isArray(careers)) {
+        return res.status(400).json({ error: "Invalid data format. Expected an array." });
+      }
       await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
       res.json({ success: true });
     } catch (error: any) {

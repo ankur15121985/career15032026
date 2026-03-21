@@ -72,6 +72,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       const isDarkMode = document.documentElement.classList.contains('dark');
       const nodes = hierarchy.descendants();
       const links = hierarchy.links();
+      console.log("[Graph] Updating tree layout. Nodes:", nodes.length, "Links:", links.length);
 
       treeLayout(hierarchy);
 

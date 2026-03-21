@@ -23,26 +23,30 @@ const GraphPage: React.FC = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       setLoading(true);
+      console.log("[GraphPage] Fetching careers...");
       try {
         const response = await fetch('/api/careers');
         if (response.ok) {
           const data = await response.json();
+          console.log("[GraphPage] Received data from API:", data?.length);
           if (data && data.length > 0) {
             setFlatCareers(data);
           } else {
-            // If API returns empty, use local data and try to save it to API
+            console.log("[GraphPage] API returned empty, seeding with local CAREERS");
             setFlatCareers(CAREERS);
             fetch('/api/careers', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(CAREERS)
-            }).catch(err => console.error("Failed to seed API careers:", err));
+            }).then(res => console.log("[GraphPage] Seed POST response:", res.status))
+              .catch(err => console.error("[GraphPage] Failed to seed API careers:", err));
           }
         } else {
+          console.log("[GraphPage] API response not OK, using local CAREERS");
           setFlatCareers(CAREERS);
         }
       } catch (error) {
-        console.error("Error loading careers:", error);
+        console.error("[GraphPage] Error loading careers:", error);
         setFlatCareers(CAREERS);
       } finally {
         setLoading(false);
@@ -58,13 +62,16 @@ const GraphPage: React.FC = () => {
   }, [selectedStream]);
 
   const filteredTree = useMemo(() => {
+    console.log("[GraphPage] Computing filteredTree, flatCareers length:", flatCareers.length);
     if (!flatCareers.length) return null;
 
     const matchingIds = new Set<string>();
     const hasActiveFilters = searchQuery.trim() !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all';
 
     if (!hasActiveFilters) {
-      return buildTree(flatCareers);
+      const tree = buildTree(flatCareers);
+      console.log("[GraphPage] No active filters, tree built:", !!tree);
+      return tree;
     }
 
     // Helper to add all ancestors of a node
@@ -151,7 +158,9 @@ const GraphPage: React.FC = () => {
     }
 
     const filtered = flatCareers.filter(item => matchingIds.has(item.id));
-    return buildTree(filtered);
+    const tree = buildTree(filtered);
+    console.log("[GraphPage] Filtered tree built:", !!tree, "Filtered count:", filtered.length);
+    return tree;
   }, [flatCareers, searchQuery, selectedStream, selectedField, selectedDuration]);
 
   const streams = useMemo(() => {

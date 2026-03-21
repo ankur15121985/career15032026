@@ -6,20 +6,23 @@ import GraphPage from './pages/GraphPage';
 import Quiz from './pages/Quiz';
 import Result from './pages/Result';
 import AdminPage from './pages/AdminPage';
+import { ThemeProvider } from './context/ThemeContext';
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="graph" element={<GraphPage />} />
-          <Route path="quiz" element={<Quiz />} />
-          <Route path="result" element={<Result />} />
-          <Route path="admin" element={<AdminPage />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="graph" element={<GraphPage />} />
+            <Route path="quiz" element={<Quiz />} />
+            <Route path="result" element={<Result />} />
+            <Route path="admin" element={<AdminPage />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 };
 

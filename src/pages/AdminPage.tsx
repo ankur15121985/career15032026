@@ -71,18 +71,24 @@ const AdminPage: React.FC = () => {
   }, [isAuthenticated]);
 
   const saveCareers = async (updatedCareers: any[]) => {
+    console.log("[AdminPage] Saving careers, count:", updatedCareers.length);
     try {
       const res = await fetch('/api/careers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedCareers)
       });
+      console.log("[AdminPage] Save response status:", res.status);
       if (res.ok) {
         setCareers(updatedCareers);
         setSuccess('Careers updated successfully');
         setTimeout(() => setSuccess(null), 3000);
+      } else {
+        const errData = await res.json();
+        setError(`Failed to save: ${errData.error || res.statusText}`);
       }
     } catch (err) {
+      console.error("[AdminPage] Save error:", err);
       setError('Failed to save careers');
     }
   };
@@ -98,19 +104,28 @@ const AdminPage: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const careerData: any = Object.fromEntries(formData.entries());
+    console.log("[AdminPage] Form data:", careerData);
     
     const newCareer = {
       ...careerData,
       is_leaf: careerData.type === 'leaf',
       parent_id: careerData.parent_id || null
     };
+    console.log("[AdminPage] New career object:", newCareer);
 
     let updated;
     if (editingCareer) {
       updated = careers.map(c => c.id === editingCareer.id ? { ...c, ...newCareer } : c);
     } else {
-      updated = [...careers, { ...newCareer, id: careerData.id || `career-${Date.now()}` }];
+      // Check for duplicate ID
+      const newId = careerData.id || `career-${Date.now()}`;
+      if (careers.some(c => c.id === newId)) {
+        setError(`A career with ID "${newId}" already exists.`);
+        return;
+      }
+      updated = [...careers, { ...newCareer, id: newId }];
     }
+    console.log("[AdminPage] Updated careers array length:", updated.length);
 
     saveCareers(updated);
     setEditingCareer(null);
