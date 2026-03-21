@@ -216,7 +216,12 @@ export async function createServer() {
       res.json({ success: true, id });
     } catch (error: any) {
       console.error("[API] POST /api/appointments Failed:", error);
-      res.status(500).json({ error: error.message || "Failed to book appointment" });
+      // Log more details to help debugging
+      console.error("[API] Error stack:", error.stack);
+      res.status(500).json({ 
+        error: error.message || "Failed to book appointment",
+        details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
+      });
     }
   });
 

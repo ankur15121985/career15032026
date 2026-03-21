@@ -18,7 +18,9 @@ import {
   Phone,
   Clock,
   GraduationCap,
-  Map as MapIcon
+  Map as MapIcon,
+  RefreshCw,
+  Download
 } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
@@ -48,29 +50,58 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const [isSeeding, setIsSeeding] = useState(false);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
+      console.log("[Admin] Fetching data...");
       const [careersRes, apptsRes] = await Promise.all([
         fetch('/api/careers'),
         fetch('/api/appointments')
       ]);
       
       if (!careersRes.ok || !apptsRes.ok) {
-        throw new Error(`Failed to fetch data: Careers(${careersRes.status}), Appointments(${apptsRes.status})`);
+        const cErr = !careersRes.ok ? `Careers: ${careersRes.status}` : '';
+        const aErr = !apptsRes.ok ? `Appointments: ${apptsRes.status}` : '';
+        throw new Error(`Failed to fetch data. ${cErr} ${aErr}`);
       }
       
       const careersData = await careersRes.json();
       const apptsData = await apptsRes.json();
       
+      console.log("[Admin] Data received:", { careers: careersData?.length, appointments: apptsData?.length });
+      
       setCareers(Array.isArray(careersData) ? careersData : []);
       setAppointments(Array.isArray(apptsData) ? apptsData : []);
     } catch (err: any) {
       console.error("[AdminPage] Fetch error:", err);
-      setError(err.message || 'Failed to fetch data');
+      setError(err.message || 'Failed to fetch data. Please ensure the backend is running.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const { CAREERS } = await import('../data/careers');
+      const res = await fetch('/api/careers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(CAREERS)
+      });
+      if (res.ok) {
+        await fetchData();
+        alert('Data seeded successfully!');
+      } else {
+        throw new Error('Failed to seed data');
+      }
+    } catch (err: any) {
+      alert('Error seeding data: ' + err.message);
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -258,6 +289,29 @@ const AdminPage: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4" /> {success}
               </div>
             )}
+            
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={fetchData}
+                disabled={loading}
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
+                title="Refresh Data"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              
+              {careers.length === 0 && (
+                <button 
+                  onClick={handleSeedData}
+                  disabled={isSeeding}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+                >
+                  <Download className={`w-3 h-3 ${isSeeding ? 'animate-bounce' : ''}`} />
+                  {isSeeding ? 'Seeding...' : 'Seed Careers'}
+                </button>
+              )}
+            </div>
+
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               {loading ? 'Syncing...' : 'System Online'}
             </div>

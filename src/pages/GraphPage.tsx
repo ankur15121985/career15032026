@@ -174,6 +174,10 @@ const GraphPage: React.FC = () => {
 
   const durations = ['1 year', '2 years', '3 years', '4 years', '5 years'];
 
+  const handleNodeClick = React.useCallback((node: CareerNode) => {
+    setSelectedNode(node);
+  }, []);
+
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
@@ -341,7 +345,7 @@ const GraphPage: React.FC = () => {
       {filteredTree ? (
         <Graph 
           data={filteredTree} 
-          onNodeClick={(node) => setSelectedNode(node)} 
+          onNodeClick={handleNodeClick} 
           expandAll={expandAllNodes || searchQuery !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all'}
         />
       ) : (

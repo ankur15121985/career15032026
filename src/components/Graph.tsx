@@ -161,7 +161,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       const nodeUpdate = nodeEnter.merge(node as any);
 
       nodeUpdate.transition()
-        .duration(500)
+        .duration(300)
         .attr('transform', (d: any) => `translate(${d.y},${d.x})`);
 
       nodeUpdate.select('text')
@@ -170,7 +170,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
         .style('fill', () => isDarkMode ? '#f8fafc' : '#0f172a');
 
       node.exit().transition()
-        .duration(500)
+        .duration(300)
         .attr('transform', () => `translate(${(source as any).y},${(source as any).x})`)
         .remove();
 
