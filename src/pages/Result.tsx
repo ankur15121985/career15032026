@@ -425,9 +425,9 @@ const Result: React.FC = () => {
                       <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Trophy className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-50 mb-1">Appointment done.</h4>
+                      <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-50 mb-1">Confirmation sent.</h4>
                       <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                        Your session has been successfully scheduled.
+                        Appointment done. Your session has been successfully scheduled.
                       </p>
                     </motion.div>
                   ) : (
