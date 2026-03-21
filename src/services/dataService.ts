@@ -89,20 +89,6 @@ export const dataService = {
     }
   },
 
-  // Visitors
-  getVisitors: async (): Promise<any[]> => {
-    try {
-      const res = await fetch('/api/admin/visitors');
-      if (res.ok) {
-        return await res.json();
-      }
-      return [];
-    } catch (error) {
-      console.error("[DataService] Error getting visitors:", error);
-      return [];
-    }
-  },
-
   saveAppointment: async (appointment: any): Promise<boolean> => {
     try {
       // Save to localStorage

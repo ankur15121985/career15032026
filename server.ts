@@ -15,12 +15,10 @@ if (!existsSync(DATA_DIR)) {
 
 const CAREERS_FILE = path.join(DATA_DIR, 'careers.json');
 const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
-const VISITORS_FILE = path.join(DATA_DIR, 'visitors.json');
 
 // In-memory fallback for Vercel/Read-only filesystems
 let memoryCareers: any[] = [];
 let memoryAppointments: any[] = [];
-let memoryVisitors: any[] = [];
 
 // Initialize files if they don't exist
 const initializeData = async () => {
@@ -40,14 +38,6 @@ const initializeData = async () => {
     } else {
       console.log("[Server] Creating appointments.json");
       writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
-    }
-
-    if (existsSync(VISITORS_FILE)) {
-      const data = await fs.readFile(VISITORS_FILE, 'utf-8');
-      memoryVisitors = data ? JSON.parse(data) : [];
-    } else {
-      console.log("[Server] Creating visitors.json");
-      writeFileSync(VISITORS_FILE, JSON.stringify([], null, 2));
     }
   } catch (e) {
     console.warn("[Server] File system initialization failed, using in-memory storage only:", e);
@@ -139,36 +129,13 @@ export async function createServer() {
   app.use(cors());
   app.use(express.json());
 
-  // Visitor Tracking
-  app.use(async (req, _res, next) => {
-    // Only track page loads (not API calls or assets)
-    if (req.path === '/' || req.path === '/index.html' || (!req.path.startsWith('/api') && !req.path.includes('.'))) {
-      const ip = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
-      const userAgent = req.headers['user-agent'] || 'unknown';
-      
-      const existingVisitor = memoryVisitors.find(v => v.ip === ip);
-      
-      if (existingVisitor) {
-        existingVisitor.lastVisit = new Date().toISOString();
-        existingVisitor.visitCount = (existingVisitor.visitCount || 1) + 1;
-      } else {
-        const newVisitor = {
-          ip,
-          userAgent,
-          firstVisit: new Date().toISOString(),
-          lastVisit: new Date().toISOString(),
-          visitCount: 1
-        };
-        memoryVisitors.push(newVisitor);
-        console.log(`[Server] New unique visitor: ${ip}`);
-      }
+  // In-memory visitor counter
+  let visitorCount = 1250;
 
-      // Persist visitors (debounced or async)
-      try {
-        await fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2));
-      } catch (e) {
-        // Ignore write errors in tracking
-      }
+  // Visitor Tracking
+  app.use((req, _res, next) => {
+    if (req.path === '/' || req.path === '/index.html') {
+      visitorCount++;
     }
     next();
   });
@@ -180,15 +147,8 @@ export async function createServer() {
 
   // Visitor Count
   app.get("/api/visitor-count", (_req, res) => {
-    // Unique visitors is the length of the visitors array
-    const count = memoryVisitors.length;
-    console.log(`[API] GET /api/visitor-count - unique count: ${count}`);
-    res.json({ count });
-  });
-
-  // Admin Visitors List
-  app.get("/api/admin/visitors", (_req, res) => {
-    res.json(memoryVisitors);
+    console.log(`[API] GET /api/visitor-count - current count: ${visitorCount}`);
+    res.json({ count: visitorCount });
   });
 
   // Careers API
