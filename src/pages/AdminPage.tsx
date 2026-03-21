@@ -17,7 +17,8 @@ import {
   Mail,
   Phone,
   Clock,
-  GraduationCap
+  GraduationCap,
+  Map as MapIcon
 } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
@@ -49,16 +50,25 @@ const AdminPage: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [careersRes, apptsRes] = await Promise.all([
         fetch('/api/careers'),
         fetch('/api/appointments')
       ]);
       
-      if (careersRes.ok) setCareers(await careersRes.json());
-      if (apptsRes.ok) setAppointments(await apptsRes.json());
-    } catch (err) {
-      setError('Failed to fetch data');
+      if (!careersRes.ok || !apptsRes.ok) {
+        throw new Error(`Failed to fetch data: Careers(${careersRes.status}), Appointments(${apptsRes.status})`);
+      }
+      
+      const careersData = await careersRes.json();
+      const apptsData = await apptsRes.json();
+      
+      setCareers(Array.isArray(careersData) ? careersData : []);
+      setAppointments(Array.isArray(apptsData) ? apptsData : []);
+    } catch (err: any) {
+      console.error("[AdminPage] Fetch error:", err);
+      setError(err.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -237,7 +247,7 @@ const AdminPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
-        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-bottom border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-10">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-xl font-display font-bold text-slate-900 dark:text-white capitalize">
             {activeTab} Management
           </h2>
@@ -288,45 +298,57 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredCareers.map(career => (
-                      <tr key={career.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900 dark:text-white text-sm">{career.name}</div>
-                          <div className="text-[10px] font-mono text-slate-400">{career.id}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                            career.type === 'root' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' :
-                            career.type === 'branch' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                            'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          }`}>
-                            {career.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                          {career.parent_id || '-'}
-                        </td>
-                        <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
-                          {career.duration || '-'}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={() => setEditingCareer(career)}
-                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteCareer(career.id)}
-                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                    {filteredCareers.length > 0 ? (
+                      filteredCareers.map(career => (
+                        <tr key={career.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">{career.name}</div>
+                            <div className="text-[10px] font-mono text-slate-400">{career.id}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                              career.type === 'root' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' :
+                              career.type === 'branch' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
+                              'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            }`}>
+                              {career.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                            {career.parent_id || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
+                            {career.duration || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => setEditingCareer(career)}
+                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteCareer(career.id)}
+                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-20 text-center">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <MapIcon className="w-6 h-6 text-slate-400" />
                           </div>
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-white">No careers found</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Try adjusting your search or add a new career.</p>
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -352,41 +374,57 @@ const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {appointments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(appt => (
-                      <tr key={appt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900 dark:text-white text-sm">{appt.user_name}</div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
-                            <Mail className="w-3 h-3" /> {appt.user_email}
+                    {appointments.length > 0 ? (
+                      [...appointments].sort((a, b) => {
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                      }).map(appt => (
+                        <tr key={appt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">{appt.user_name}</div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                              <Mail className="w-3 h-3" /> {appt.user_email}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                              <Phone className="w-3 h-3" /> {appt.user_phone}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{appt.consultant_name}</div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
+                              <Calendar className="w-3 h-3" /> {appt.appointment_time ? new Date(appt.appointment_time).toLocaleDateString() : 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                              <Clock className="w-3 h-3" /> {appt.appointment_time ? new Date(appt.appointment_time).toLocaleTimeString() : 'N/A'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                              <GraduationCap className="w-3 h-3" /> {appt.top_recommendation || 'General'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              onClick={() => handleDeleteAppointment(appt.id)}
+                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-20 text-center">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Calendar className="w-6 h-6 text-slate-400" />
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                            <Phone className="w-3 h-3" /> {appt.user_phone}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{appt.consultant_name}</div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1">
-                            <Calendar className="w-3 h-3" /> {new Date(appt.appointment_time).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                            <Clock className="w-3 h-3" /> {new Date(appt.appointment_time).toLocaleTimeString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                            <GraduationCap className="w-3 h-3" /> {appt.top_recommendation}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={() => handleDeleteAppointment(appt.id)}
-                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-white">No appointments found</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">New bookings will appear here.</p>
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

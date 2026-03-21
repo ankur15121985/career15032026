@@ -119,10 +119,10 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
           if (!d.data.is_leaf) {
             if (d.children) {
               d._children = d.children;
-              d.children = undefined;
+              d.children = null;
             } else {
               d.children = d._children;
-              d._children = undefined;
+              d._children = null;
             }
             update(d);
           }
