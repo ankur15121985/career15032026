@@ -138,8 +138,8 @@ const Layout: React.FC = () => {
             <h4 className="font-display font-bold mb-6 text-lg">Contact</h4>
             <ul className="space-y-4 text-slate-400">
               <li>support@waqt.edu</li>
-              <li>+1 (555) 123-4567</li>
-              <li>New Delhi, India</li>
+              <li>+91 9799878850</li>
+              <li>Jaipur, Rajasthan, India</li>
             </ul>
           </div>
         </div>
