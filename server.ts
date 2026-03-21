@@ -68,9 +68,10 @@ const getTransporter = () => {
 
   if (!transporter) {
     if (!host || !user || !pass) {
-      console.warn("[Email] SMTP config missing. Skipping email.");
+      console.warn("[Email] SMTP config missing on Vercel/Environment. Host:", !!host, "User:", !!user, "Pass:", !!pass);
       return null;
     }
+    console.log("[Email] Initializing transporter with host:", host, "port:", port);
     transporter = nodemailer.createTransport({
       host,
       port,
@@ -250,10 +251,13 @@ export async function createServer() {
         return res.status(400).json({ error: "Missing email data" });
       }
       
-      // Send email in background
-      sendResultsEmail(data).catch(err => {
-        console.error("[API] Background results email failed:", err);
-      });
+      // Send email
+      try {
+        await sendResultsEmail(data);
+        console.log("[API] Results email sent successfully");
+      } catch (err) {
+        console.error("[API] Results email failed:", err);
+      }
       
       res.json({ success: true });
     } catch (error: any) {
@@ -329,10 +333,13 @@ export async function createServer() {
         console.warn("[API] Failed to save appointments to file, saved in memory only");
       }
 
-      // Send email in background
-      sendAppointmentEmail(newAppointment).catch(err => {
-        console.error("[API] Background email failed:", err);
-      });
+      // Send email
+      try {
+        await sendAppointmentEmail(newAppointment);
+        console.log("[API] Appointment email sent successfully");
+      } catch (err) {
+        console.error("[API] Appointment email failed:", err);
+      }
       
       res.json({ success: true, id });
     } catch (error: any) {
