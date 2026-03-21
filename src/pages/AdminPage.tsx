@@ -14,6 +14,7 @@ import {
   CheckCircle2, 
   AlertCircle,
   Search,
+  Activity,
   Calendar,
   Mail,
   Phone,
@@ -27,7 +28,7 @@ import {
 const AdminPage: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'careers' | 'appointments'>('careers');
+  const [activeTab, setActiveTab] = useState<'careers' | 'appointments' | 'visitors'>('careers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -40,6 +41,9 @@ const AdminPage: React.FC = () => {
 
   // Appointments State
   const [appointments, setAppointments] = useState<any[]>([]);
+
+  // Visitors State
+  const [visitors, setVisitors] = useState<any[]>([]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,15 +62,21 @@ const AdminPage: React.FC = () => {
     setError(null);
     try {
       console.log("[Admin] Fetching data from service...");
-      const [careersData, apptsData] = await Promise.all([
+      const [careersData, apptsData, visitorsData] = await Promise.all([
         dataService.getCareers(),
-        dataService.getAppointments()
+        dataService.getAppointments(),
+        dataService.getVisitors()
       ]);
       
-      console.log("[Admin] Data received:", { careers: careersData?.length, appointments: apptsData?.length });
+      console.log("[Admin] Data received:", { 
+        careers: careersData?.length, 
+        appointments: apptsData?.length,
+        visitors: visitorsData?.length
+      });
       
       setCareers(Array.isArray(careersData) ? careersData : []);
       setAppointments(Array.isArray(apptsData) ? apptsData : []);
+      setVisitors(Array.isArray(visitorsData) ? visitorsData : []);
     } catch (err: any) {
       console.error("[AdminPage] Fetch error:", err);
       setError(err.message || 'Failed to fetch data. Please ensure your browser supports local storage.');
@@ -248,6 +258,12 @@ const AdminPage: React.FC = () => {
             >
               <Users className="w-4 h-4" /> Appointments
             </button>
+            <button 
+              onClick={() => setActiveTab('visitors')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'visitors' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            >
+              <Activity className="w-4 h-4" /> Visitors Log
+            </button>
           </nav>
         </div>
 
@@ -392,14 +408,13 @@ const AdminPage: React.FC = () => {
                 </table>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'appointments' ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Appointments</div>
                   <div className="text-3xl font-display font-bold text-slate-900 dark:text-white">{appointments.length}</div>
                 </div>
-                {/* Add more stats if needed */}
               </div>
 
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
@@ -461,6 +476,77 @@ const AdminPage: React.FC = () => {
                           </div>
                           <h3 className="text-sm font-medium text-slate-900 dark:text-white">No appointments found</h3>
                           <p className="text-xs text-slate-500 dark:text-slate-400">New bookings will appear here.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Unique Visitors</div>
+                  <div className="text-3xl font-display font-bold text-slate-900 dark:text-white">{visitors.length}</div>
+                </div>
+                <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Page Views</div>
+                  <div className="text-3xl font-display font-bold text-slate-900 dark:text-white">
+                    {visitors.reduce((acc, v) => acc + (v.visitCount || 0), 0)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">IP Address</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">First / Last Visit</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Visits</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">User Agent</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {visitors.length > 0 ? (
+                      [...visitors].sort((a, b) => {
+                        const dateA = a.lastVisit ? new Date(a.lastVisit).getTime() : 0;
+                        const dateB = b.lastVisit ? new Date(b.lastVisit).getTime() : 0;
+                        return dateB - dateA;
+                      }).map((visitor, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                          <td className="px-6 py-4 font-mono text-sm text-indigo-600 dark:text-indigo-400">
+                            {visitor.ip}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-xs text-slate-600 dark:text-slate-300">
+                              <span className="text-slate-400">First:</span> {new Date(visitor.firstVisit).toLocaleString()}
+                            </div>
+                            <div className="text-xs text-slate-600 dark:text-slate-300">
+                              <span className="text-slate-400">Last:</span> {new Date(visitor.lastVisit).toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-bold">
+                              {visitor.visitCount}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-[10px] text-slate-400 max-w-xs truncate" title={visitor.userAgent}>
+                              {visitor.userAgent}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-20 text-center">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Activity className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-white">No visitors found</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Visitor logs will appear here.</p>
                         </td>
                       </tr>
                     )}
