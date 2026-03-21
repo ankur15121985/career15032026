@@ -154,7 +154,7 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
         .attr('x', (d: any) => d.children || d._children ? -28 : 28)
         .attr('text-anchor', (d: any) => d.children || d._children ? 'end' : 'start')
         .text((d: any) => d.data.name)
-        .attr('class', 'font-display text-sm font-bold tracking-tight')
+        .attr('class', 'font-display text-[10px] md:text-sm font-bold tracking-tight')
         .style('fill', () => isDarkMode ? '#f8fafc' : '#0f172a')
         .style('text-shadow', isDarkMode ? '0 2px 4px rgba(0,0,0,0.5)' : '0 1px 2px rgba(255,255,255,0.8)');
 

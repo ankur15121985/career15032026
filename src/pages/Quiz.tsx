@@ -16,9 +16,11 @@ const Quiz: React.FC = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      // Pick 20 random questions from the 1000+ available
-      const shuffled = [...QUESTIONS].sort(() => 0.5 - Math.random());
-      const selected = shuffled.slice(0, 20);
+      // Pick 10 IQ and 10 AQ questions
+      const iqQuestions = QUESTIONS.filter(q => q.type === 'IQ').sort(() => 0.5 - Math.random()).slice(0, 10);
+      const aqQuestions = QUESTIONS.filter(q => q.type === 'AQ').sort(() => 0.5 - Math.random()).slice(0, 10);
+      
+      const selected = [...iqQuestions, ...aqQuestions].sort(() => 0.5 - Math.random());
       setQuestions(selected);
       setStep('quiz');
     } catch (err) {

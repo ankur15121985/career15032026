@@ -206,7 +206,7 @@ const GraphPage: React.FC = () => {
       </div>
 
       {/* Filter Controls Overlay */}
-      <div className="absolute top-6 left-6 z-50 flex flex-col gap-4 max-w-md w-full pointer-events-none">
+      <div className="absolute top-6 left-4 right-4 md:left-6 md:right-auto z-50 flex flex-col gap-4 max-w-md w-auto md:w-full pointer-events-none">
         <div className="flex gap-2 pointer-events-auto">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -226,7 +226,7 @@ const GraphPage: React.FC = () => {
           </button>
           <button 
             onClick={() => setExpandAllNodes(!expandAllNodes)}
-            className={`px-4 py-3 rounded-2xl backdrop-blur-xl border transition-all shadow-xl text-xs font-bold uppercase tracking-widest ${expandAllNodes ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`}
+            className={`hidden sm:block px-4 py-3 rounded-2xl backdrop-blur-xl border transition-all shadow-xl text-xs font-bold uppercase tracking-widest ${expandAllNodes ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'}`}
           >
             {expandAllNodes ? 'Collapse' : 'Expand All'}
           </button>

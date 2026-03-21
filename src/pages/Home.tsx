@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Compass, Target, GraduationCap, ArrowRight, Users } from 'lucide-react';
+import { Compass, Target, GraduationCap, ArrowRight, Users, Map as MapIcon, BarChart3, User } from 'lucide-react';
 
 const Home: React.FC = () => {
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
@@ -100,7 +100,7 @@ const Home: React.FC = () => {
             <motion.h1 
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-8xl font-display font-bold tracking-tighter leading-[0.85] mb-8"
+              className="text-6xl md:text-9xl font-display font-bold tracking-tighter leading-[0.8] mb-8"
             >
               NAVIGATE <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-emerald-400">YOUR DESTINY</span>
@@ -110,7 +110,7 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12 font-sans leading-relaxed"
+              className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 font-sans leading-relaxed"
             >
               Stop guessing. Start knowing. Explore a universe of 1000+ career paths 
               mapped with precision for the modern student.
@@ -120,13 +120,13 @@ const Home: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col md:flex-row gap-8 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-6 sm:gap-8 justify-center items-center"
             >
               <Link 
                 to="/graph" 
-                className="group relative px-12 py-6 bg-white text-black rounded-full font-bold transition-all overflow-hidden"
+                className="w-full sm:w-auto group relative px-10 py-5 bg-white text-black rounded-full font-bold transition-all overflow-hidden text-center"
               >
-                <span className="relative z-10 flex items-center gap-3 text-lg">
+                <span className="relative z-10 flex items-center justify-center gap-3 text-lg">
                   Launch Career Map <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                 </span>
                 <div className="absolute inset-0 bg-indigo-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -134,7 +134,7 @@ const Home: React.FC = () => {
               
               <Link 
                 to="/quiz" 
-                className="px-12 py-6 bg-transparent hover:bg-white/5 text-white border border-white/20 rounded-full font-bold transition-all text-lg"
+                className="w-full sm:w-auto px-10 py-5 bg-transparent hover:bg-white/5 text-white border border-white/20 rounded-full font-bold transition-all text-lg text-center"
               >
                 Take the Assessment
               </Link>
@@ -221,6 +221,60 @@ const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* Why Choose Us Section */}
+      <section className="py-24 px-6 bg-slate-50 dark:bg-slate-900/50 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-slate-900 dark:text-white mb-6">
+              Why Choose <span className="text-indigo-600 dark:text-indigo-400">Career Sirji</span>?
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              We combine scientific assessments with expert human guidance to help you navigate the complex world of modern careers.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "1000+ Career Paths",
+                description: "Explore a vast universe of careers, from traditional professions to the most modern, less-travelled paths.",
+                icon: <MapIcon className="w-8 h-8 text-indigo-600" />,
+                color: "bg-indigo-500/10"
+              },
+              {
+                title: "Scientific Assessment",
+                description: "Our IQ and AQ tests are designed to measure your true potential and situational adaptability.",
+                icon: <BarChart3 className="w-8 h-8 text-emerald-600" />,
+                color: "bg-emerald-500/10"
+              },
+              {
+                title: "Expert Mentorship",
+                description: "Get direct access to Vineet Bansal, a seasoned career counselor with years of experience in student guidance.",
+                icon: <User className="w-8 h-8 text-amber-600" />,
+                color: "bg-amber-500/10"
+              }
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.1 }}
+                className="p-10 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group"
+              >
+                <div className={`w-16 h-16 ${item.color} rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform`}>
+                  {item.icon}
+                </div>
+                <h3 className="text-2xl font-display font-bold text-slate-900 dark:text-white mb-4">{item.title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {item.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Counselor Section */}
       <section className="py-24 container mx-auto px-6">
         <motion.div 
@@ -233,22 +287,24 @@ const Home: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full -ml-32 -mb-32" />
           
           <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
-            <div className="w-48 h-48 md:w-64 md:h-64 rounded-[3rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/50 dark:to-violet-900/50 flex items-center justify-center overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
-              <Users className="w-24 h-24 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-48 h-48 md:w-80 md:h-80 rounded-[4rem] bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/50 dark:to-violet-900/50 flex items-center justify-center overflow-hidden border-8 border-white dark:border-slate-800 shadow-2xl relative group">
+              <Users className="w-32 h-32 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             
             <div className="flex-1 text-center md:text-left">
               <div className="inline-block px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
                 Expert Guidance Available
               </div>
-              <h2 className="text-3xl md:text-5xl font-display font-bold text-slate-900 dark:text-white mb-3">
+              <h2 className="text-4xl md:text-6xl font-display font-bold text-slate-900 dark:text-white mb-3">
                 Vineet Bansal
               </h2>
-              <p className="text-lg text-slate-500 dark:text-slate-400 mb-6 font-sans">
-                Lead Career Counselor & Educational Strategist
+              <p className="text-xl text-slate-500 dark:text-slate-400 mb-8 font-sans max-w-xl">
+                Lead Career Counselor & Educational Strategist with over 15 years of experience 
+                helping students find their true calling.
               </p>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                 <a 
                   href="tel:9799878850" 
                   className="flex items-center gap-4 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all group"
@@ -275,6 +331,13 @@ const Home: React.FC = () => {
                   </div>
                 </a>
               </div>
+
+              <Link 
+                to="/quiz" 
+                className="inline-flex items-center gap-3 px-10 py-5 bg-indigo-600 text-white rounded-full font-bold hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20"
+              >
+                Book Personal Session <ArrowRight className="w-5 h-5" />
+              </Link>
             </div>
           </div>
         </motion.div>
