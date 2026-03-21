@@ -7,6 +7,8 @@ import { buildTree } from '../data/defaultCareers';
 import { Filter, Search, Clock, GraduationCap, X } from 'lucide-react';
 import { CAREERS } from '../data/careers';
 
+import { dataService } from '../services/dataService';
+
 const GraphPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<CareerNode | null>(null);
   const [flatCareers, setFlatCareers] = useState<any[]>([]);
@@ -23,28 +25,11 @@ const GraphPage: React.FC = () => {
   useEffect(() => {
     const fetchCareers = async () => {
       setLoading(true);
-      console.log("[GraphPage] Fetching careers...");
+      console.log("[GraphPage] Fetching careers from service...");
       try {
-        const response = await fetch('/api/careers');
-        if (response.ok) {
-          const data = await response.json();
-          console.log("[GraphPage] Received data from API:", data?.length);
-          if (data && data.length > 0) {
-            setFlatCareers(data);
-          } else {
-            console.log("[GraphPage] API returned empty, seeding with local CAREERS");
-            setFlatCareers(CAREERS);
-            fetch('/api/careers', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(CAREERS)
-            }).then(res => console.log("[GraphPage] Seed POST response:", res.status))
-              .catch(err => console.error("[GraphPage] Failed to seed API careers:", err));
-          }
-        } else {
-          console.log("[GraphPage] API response not OK, using local CAREERS");
-          setFlatCareers(CAREERS);
-        }
+        const data = await dataService.getCareers();
+        console.log("[GraphPage] Received data from service:", data?.length);
+        setFlatCareers(data || []);
       } catch (error) {
         console.error("[GraphPage] Error loading careers:", error);
         setFlatCareers(CAREERS);

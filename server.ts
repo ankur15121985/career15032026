@@ -16,18 +16,33 @@ if (!existsSync(DATA_DIR)) {
 const CAREERS_FILE = path.join(DATA_DIR, 'careers.json');
 const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
 
+// In-memory fallback for Vercel/Read-only filesystems
+let memoryCareers: any[] = [];
+let memoryAppointments: any[] = [];
+
 // Initialize files if they don't exist
 const initializeData = async () => {
   console.log("[Server] Initializing data files...");
-  if (!existsSync(CAREERS_FILE)) {
-    console.log("[Server] Creating careers.json");
-    writeFileSync(CAREERS_FILE, JSON.stringify([], null, 2));
+  try {
+    if (existsSync(CAREERS_FILE)) {
+      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+      memoryCareers = data ? JSON.parse(data) : [];
+    } else {
+      console.log("[Server] Creating careers.json");
+      writeFileSync(CAREERS_FILE, JSON.stringify([], null, 2));
+    }
+    
+    if (existsSync(APPOINTMENTS_FILE)) {
+      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+      memoryAppointments = data ? JSON.parse(data) : [];
+    } else {
+      console.log("[Server] Creating appointments.json");
+      writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
+    }
+  } catch (e) {
+    console.warn("[Server] File system initialization failed, using in-memory storage only:", e);
   }
-  if (!existsSync(APPOINTMENTS_FILE)) {
-    console.log("[Server] Creating appointments.json");
-    writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
-  }
-  console.log("[Server] Data files initialized");
+  console.log("[Server] Data initialization complete");
 };
 
 initializeData();
@@ -139,27 +154,30 @@ export async function createServer() {
   // Careers API
   app.get("/api/careers", async (_req, res) => {
     try {
-      if (!existsSync(CAREERS_FILE)) {
-        return res.json([]);
+      let careers = memoryCareers;
+      if (existsSync(CAREERS_FILE)) {
+        const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+        careers = data ? JSON.parse(data) : memoryCareers;
       }
-      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
-      const careers = data ? JSON.parse(data) : [];
       res.json(careers);
     } catch (error: any) {
-      console.error("[API] Failed to read careers:", error);
-      res.status(500).json({ error: "Failed to read careers" });
+      console.warn("[API] Failed to read careers from file, using memory:", error);
+      res.json(memoryCareers);
     }
   });
 
   app.post("/api/careers", async (req, res) => {
     try {
       const careers = req.body;
-      console.log(`[API] POST /api/careers - body type: ${typeof careers}, isArray: ${Array.isArray(careers)}`);
-      console.log(`[API] POST /api/careers - received ${Array.isArray(careers) ? careers.length : 'non-array'} items`);
       if (!Array.isArray(careers)) {
         return res.status(400).json({ error: "Invalid data format. Expected an array." });
       }
-      await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
+      memoryCareers = careers;
+      try {
+        await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
+      } catch (e) {
+        console.warn("[API] Failed to save careers to file, saved in memory only");
+      }
       res.json({ success: true });
     } catch (error: any) {
       console.error("[API] Failed to save careers:", error);
@@ -170,15 +188,15 @@ export async function createServer() {
   // Appointments API
   app.get("/api/appointments", async (_req, res) => {
     try {
-      if (!existsSync(APPOINTMENTS_FILE)) {
-        return res.json([]);
+      let appointments = memoryAppointments;
+      if (existsSync(APPOINTMENTS_FILE)) {
+        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+        appointments = data ? JSON.parse(data) : memoryAppointments;
       }
-      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-      const appointments = data ? JSON.parse(data) : [];
       res.json(appointments);
     } catch (error: any) {
-      console.error("[API] Failed to read appointments:", error);
-      res.status(500).json({ error: "Failed to read appointments" });
+      console.warn("[API] Failed to read appointments from file, using memory:", error);
+      res.json(memoryAppointments);
     }
   });
 
@@ -193,22 +211,15 @@ export async function createServer() {
       const id = 'appt-' + Date.now();
       const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
       
-      // Save to file
-      let appointments = [];
+      memoryAppointments.push(newAppointment);
+      
       try {
-        if (existsSync(APPOINTMENTS_FILE)) {
-          const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-          appointments = data ? JSON.parse(data) : [];
-        }
+        await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
       } catch (e) {
-        console.warn("[API] Failed to read appointments file, starting fresh");
-        appointments = [];
+        console.warn("[API] Failed to save appointments to file, saved in memory only");
       }
 
-      appointments.push(newAppointment);
-      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(appointments, null, 2));
-
-      // Send email in background - don't await it to avoid 500 if SMTP fails
+      // Send email in background
       sendAppointmentEmail(newAppointment).catch(err => {
         console.error("[API] Background email failed:", err);
       });
@@ -216,22 +227,19 @@ export async function createServer() {
       res.json({ success: true, id });
     } catch (error: any) {
       console.error("[API] POST /api/appointments Failed:", error);
-      // Log more details to help debugging
-      console.error("[API] Error stack:", error.stack);
-      res.status(500).json({ 
-        error: error.message || "Failed to book appointment",
-        details: process.env.NODE_ENV !== 'production' ? error.stack : undefined
-      });
+      res.status(500).json({ error: "Failed to book appointment" });
     }
   });
 
   app.delete("/api/appointments/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-      const appointments = JSON.parse(data);
-      const filtered = appointments.filter((a: any) => a.id !== id);
-      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(filtered, null, 2));
+      memoryAppointments = memoryAppointments.filter((a: any) => a.id !== id);
+      try {
+        await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
+      } catch (e) {
+        console.warn("[API] Failed to delete appointment from file, updated in memory only");
+      }
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to delete appointment" });

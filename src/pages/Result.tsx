@@ -5,6 +5,8 @@ import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { COLLEGES } from '../data/colleges';
 
+import { dataService } from '../services/dataService';
+
 const Result: React.FC = () => {
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
@@ -113,41 +115,26 @@ const Result: React.FC = () => {
     setIsSending(true);
     setError(null);
     try {
-      const response = await fetch('/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          consultant_name: "Vineet Bansal",
-          appointment_time: appointmentTime,
-          user_name: contactInfo.name,
-          user_email: contactInfo.email,
-          user_phone: contactInfo.phone,
-          aq_score: aqScore,
-          iq_score: iqScore,
-          top_recommendation: recommendations[0]
-        })
-      });
+      const appointmentData = {
+        consultant_name: "Vineet Bansal",
+        appointment_time: appointmentTime,
+        user_name: contactInfo.name,
+        user_email: contactInfo.email,
+        user_phone: contactInfo.phone,
+        aq_score: aqScore,
+        iq_score: iqScore,
+        top_recommendation: recommendations[0]
+      };
 
-      if (!response.ok) {
-        let errorMessage = "Failed to book appointment";
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const errData = await response.json();
-          errorMessage = errData.error || errorMessage;
-        } else {
-          const textError = await response.text();
-          console.error("Server returned non-JSON error:", textError);
-          const isNetlify = window.location.hostname.includes('netlify.app');
-          errorMessage = isNetlify 
-            ? "You are using a static version of the app (Netlify). Please use the official App URL to book appointments."
-            : `Server error (${response.status}). Please ensure you are using the correct App URL and the backend is running.`;
-        }
-        throw new Error(errorMessage);
+      const success = await dataService.saveAppointment(appointmentData);
+
+      if (!success) {
+        throw new Error("Failed to book appointment. Please try again.");
       }
 
       setIsSending(false);
       setIsSent(true);
-      console.log(`Appointment confirmed and email request sent to ${contactInfo.email}`);
+      console.log(`Appointment confirmed and saved locally for ${contactInfo.email}`);
     } catch (error: any) {
       console.error("Failed to save appointment:", error);
       setIsSending(false);

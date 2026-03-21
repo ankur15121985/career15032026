@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { dataService } from '../services/dataService';
 import { 
   LayoutDashboard, 
   Users, 
@@ -56,20 +57,11 @@ const AdminPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      console.log("[Admin] Fetching data...");
-      const [careersRes, apptsRes] = await Promise.all([
-        fetch('/api/careers'),
-        fetch('/api/appointments')
+      console.log("[Admin] Fetching data from service...");
+      const [careersData, apptsData] = await Promise.all([
+        dataService.getCareers(),
+        dataService.getAppointments()
       ]);
-      
-      if (!careersRes.ok || !apptsRes.ok) {
-        const cErr = !careersRes.ok ? `Careers: ${careersRes.status}` : '';
-        const aErr = !apptsRes.ok ? `Appointments: ${apptsRes.status}` : '';
-        throw new Error(`Failed to fetch data. ${cErr} ${aErr}`);
-      }
-      
-      const careersData = await careersRes.json();
-      const apptsData = await apptsRes.json();
       
       console.log("[Admin] Data received:", { careers: careersData?.length, appointments: apptsData?.length });
       
@@ -77,7 +69,7 @@ const AdminPage: React.FC = () => {
       setAppointments(Array.isArray(apptsData) ? apptsData : []);
     } catch (err: any) {
       console.error("[AdminPage] Fetch error:", err);
-      setError(err.message || 'Failed to fetch data. Please ensure the backend is running.');
+      setError(err.message || 'Failed to fetch data. Please ensure your browser supports local storage.');
     } finally {
       setLoading(false);
     }
@@ -87,14 +79,10 @@ const AdminPage: React.FC = () => {
     setIsSeeding(true);
     try {
       const { CAREERS } = await import('../data/careers');
-      const res = await fetch('/api/careers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(CAREERS)
-      });
-      if (res.ok) {
+      const success = await dataService.saveCareers(CAREERS);
+      if (success) {
         await fetchData();
-        alert('Data seeded successfully!');
+        alert('Data seeded successfully! (Stored in your browser)');
       } else {
         throw new Error('Failed to seed data');
       }
@@ -112,21 +100,15 @@ const AdminPage: React.FC = () => {
   }, [isAuthenticated]);
 
   const saveCareers = async (updatedCareers: any[]) => {
-    console.log("[AdminPage] Saving careers, count:", updatedCareers.length);
+    console.log("[AdminPage] Saving careers to service, count:", updatedCareers.length);
     try {
-      const res = await fetch('/api/careers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedCareers)
-      });
-      console.log("[AdminPage] Save response status:", res.status);
-      if (res.ok) {
+      const success = await dataService.saveCareers(updatedCareers);
+      if (success) {
         setCareers(updatedCareers);
-        setSuccess('Careers updated successfully');
+        setSuccess('Careers updated successfully (Stored in your browser)');
         setTimeout(() => setSuccess(null), 3000);
       } else {
-        const errData = await res.json();
-        setError(`Failed to save: ${errData.error || res.statusText}`);
+        setError('Failed to save careers to local storage');
       }
     } catch (err) {
       console.error("[AdminPage] Save error:", err);
@@ -176,13 +158,16 @@ const AdminPage: React.FC = () => {
   const handleDeleteAppointment = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this appointment?')) {
       try {
-        const res = await fetch(`/api/appointments/${id}`, { method: 'DELETE' });
-        if (res.ok) {
+        const success = await dataService.deleteAppointment(id);
+        if (success) {
           setAppointments(appointments.filter(a => a.id !== id));
           setSuccess('Appointment deleted');
           setTimeout(() => setSuccess(null), 3000);
+        } else {
+          setError('Failed to delete appointment');
         }
       } catch (err) {
+        console.error("[AdminPage] Delete error:", err);
         setError('Failed to delete appointment');
       }
     }
