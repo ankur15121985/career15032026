@@ -24,10 +24,26 @@ const GraphPage: React.FC = () => {
     const fetchCareers = async () => {
       setLoading(true);
       try {
-        // Use local static data instead of Firebase
-        setFlatCareers(CAREERS);
+        const response = await fetch('/api/careers');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            setFlatCareers(data);
+          } else {
+            // If API returns empty, use local data and try to save it to API
+            setFlatCareers(CAREERS);
+            fetch('/api/careers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(CAREERS)
+            }).catch(err => console.error("Failed to seed API careers:", err));
+          }
+        } else {
+          setFlatCareers(CAREERS);
+        }
       } catch (error) {
         console.error("Error loading careers:", error);
+        setFlatCareers(CAREERS);
       } finally {
         setLoading(false);
       }

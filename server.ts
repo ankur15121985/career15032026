@@ -4,6 +4,31 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
+import fs from "fs/promises";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+
+// Ensure data directory exists
+const DATA_DIR = path.join(process.cwd(), 'data');
+if (!existsSync(DATA_DIR)) {
+  mkdirSync(DATA_DIR);
+}
+
+const CAREERS_FILE = path.join(DATA_DIR, 'careers.json');
+const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
+
+// Initialize files if they don't exist
+const initializeData = async () => {
+  if (!existsSync(CAREERS_FILE)) {
+    // We'll import the default careers from the source if possible, or just use a placeholder
+    // For now, let's use a simple placeholder or wait for the first save
+    writeFileSync(CAREERS_FILE, JSON.stringify([], null, 2));
+  }
+  if (!existsSync(APPOINTMENTS_FILE)) {
+    writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
+  }
+};
+
+initializeData();
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -109,15 +134,82 @@ export async function createServer() {
     res.json({ count: visitorCount });
   });
 
-  // Appointment Booking
+  // Careers API
+  app.get("/api/careers", async (_req, res) => {
+    try {
+      if (!existsSync(CAREERS_FILE)) {
+        return res.json([]);
+      }
+      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+      const careers = data ? JSON.parse(data) : [];
+      res.json(careers);
+    } catch (error: any) {
+      console.error("[API] Failed to read careers:", error);
+      res.status(500).json({ error: "Failed to read careers" });
+    }
+  });
+
+  app.post("/api/careers", async (req, res) => {
+    try {
+      const careers = req.body;
+      await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[API] Failed to save careers:", error);
+      res.status(500).json({ error: "Failed to save careers" });
+    }
+  });
+
+  // Appointments API
+  app.get("/api/appointments", async (_req, res) => {
+    try {
+      if (!existsSync(APPOINTMENTS_FILE)) {
+        return res.json([]);
+      }
+      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+      const appointments = data ? JSON.parse(data) : [];
+      res.json(appointments);
+    } catch (error: any) {
+      console.error("[API] Failed to read appointments:", error);
+      res.status(500).json({ error: "Failed to read appointments" });
+    }
+  });
+
   app.post("/api/appointments", async (req, res) => {
     try {
       const appointmentData = req.body;
-      await sendAppointmentEmail(appointmentData);
-      res.json({ success: true, id: 'appt-' + Date.now() });
+      const id = 'appt-' + Date.now();
+      const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
+      
+      // Save to file
+      let appointments = [];
+      if (existsSync(APPOINTMENTS_FILE)) {
+        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+        appointments = data ? JSON.parse(data) : [];
+      }
+      appointments.push(newAppointment);
+      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(appointments, null, 2));
+
+      // Send email
+      await sendAppointmentEmail(newAppointment);
+      
+      res.json({ success: true, id });
     } catch (error: any) {
       console.error("[API] Failed:", error.message);
       res.status(500).json({ error: error.message || "Failed to book appointment" });
+    }
+  });
+
+  app.delete("/api/appointments/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+      const appointments = JSON.parse(data);
+      const filtered = appointments.filter((a: any) => a.id !== id);
+      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(filtered, null, 2));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete appointment" });
     }
   });
 

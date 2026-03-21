@@ -16,6 +16,7 @@ export interface CareerNode {
   children?: CareerNode[];
   universities?: University[];
   isLeaf?: boolean;
+  is_leaf?: boolean;
   type?: 'root' | 'branch' | 'leaf';
   parent_id?: string | null;
   duration?: string;

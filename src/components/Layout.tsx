@@ -131,6 +131,7 @@ const Layout: React.FC = () => {
               <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
               <li><Link to="/graph" className="hover:text-white transition-colors">Career Map</Link></li>
               <li><Link to="/quiz" className="hover:text-white transition-colors">Career Quiz</Link></li>
+              <li><Link to="/admin" className="hover:text-white transition-colors">Admin Dashboard</Link></li>
             </ul>
           </div>
           <div>
