@@ -135,13 +135,12 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
       nodeEnter.append('circle')
         .attr('r', (d: any) => d.data.type === 'root' ? 18 : d.data.is_leaf ? 10 : 14)
         .attr('fill', (d: any) => {
-          if (d.data.type === 'root') return isDarkMode ? '#818cf8' : '#1e293b';
+          if (d.data.type === 'root') return isDarkMode ? '#818cf8' : '#6366f1';
           if (d.data.is_leaf) return '#10b981';
           const colors = isDarkMode ? ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef'] : ['#4f46e5', '#7c3aed', '#9333ea', '#c026d3'];
           return colors[d.depth % colors.length];
         })
-        .attr('stroke', isDarkMode ? '#0f172a' : '#fff')
-        .attr('stroke-width', 4)
+        .attr('stroke', 'none')
         .style('filter', (d: any) => d.data.is_leaf ? 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.4))' : 'none');
 
       // Add a smaller inner circle for a "hardware" look

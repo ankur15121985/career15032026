@@ -576,7 +576,23 @@ export const DEFAULT_UNIVERSITIES: Record<string, any[]> = {
     { name: 'NMIMS', location: 'Mumbai, India', fees: '₹3,00,000/year', duration: '3 years', ranking: 'Private - Top Tier', specialization: 'Management', website: 'https://www.nmims.edu' },
     { name: 'Wharton School (UPenn)', location: 'Philadelphia, USA', fees: '$62,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Business', website: 'https://www.wharton.upenn.edu' },
     { name: 'INSEAD', location: 'Fontainebleau, France', fees: '€90,000 (Total)', duration: '1 year (MBA)', ranking: 'Global #1', specialization: 'Management', website: 'https://www.insead.edu' },
-    { name: 'HEC Paris', location: 'Jouy-en-Josas, France', fees: '€40,000/year', duration: '3 years (MiM)', ranking: 'Global #1', specialization: 'Business', website: 'https://www.hec.edu' }
+    { name: 'HEC Paris', location: 'Jouy-en-Josas, France', fees: '€40,000/year', duration: '3 years (MiM)', ranking: 'Global #1', specialization: 'Business', website: 'https://www.hec.edu' },
+    { name: 'ESADE Business School', location: 'Barcelona, Spain', fees: '€30,000/year', duration: '3 years', ranking: 'Global #5', specialization: 'Management', website: 'https://www.esade.edu' }
+  ],
+  'ca-root': [
+    { name: 'ICAI', location: 'New Delhi, India', fees: '₹20,000 (Total Exam Fees)', duration: '4-5 years', ranking: 'Statutory Body', specialization: 'Chartered Accountancy', website: 'https://www.icai.org' }
+  ],
+  'nda': [
+    { name: 'National Defence Academy', location: 'Khadakwasla, Pune', fees: 'Fully Funded by Govt', duration: '3 years', ranking: 'Premier Defense Academy', specialization: 'Defense', website: 'https://nda.nic.in' }
+  ],
+  'fashion-design': [
+    { name: 'NIFT Delhi', location: 'New Delhi, India', fees: '₹2,50,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Fashion Design', website: 'https://www.nift.ac.in/delhi/' },
+    { name: 'National Institute of Design (NID)', location: 'Ahmedabad, India', fees: '₹3,00,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Design', website: 'https://www.nid.edu' },
+    { name: 'Parsons School of Design', location: 'New York, USA', fees: '$50,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Fashion', website: 'https://www.newschool.edu/parsons/' }
+  ],
+  'poly-cs': [
+    { name: 'Government Polytechnic', location: 'Mumbai, India', fees: '₹10,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Computer Science', website: 'https://gpmumbai.ac.in' },
+    { name: 'Pusa Institute of Technology', location: 'New Delhi, India', fees: '₹8,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Engineering', website: 'http://pusapoly.delhi.gov.in' }
   ],
   'ba-llb': [
     { name: 'NLSIU Bangalore', location: 'Bangalore, India', fees: '₹2,50,000/year', duration: '5 years', ranking: 'Govt - NIRF #1', specialization: 'Law', website: 'https://www.nls.ac.in' },
@@ -590,10 +606,6 @@ export const DEFAULT_UNIVERSITIES: Record<string, any[]> = {
     { name: 'IIT Bombay (IDC)', location: 'Mumbai, India', fees: '₹2,00,000/year', duration: '4 years', ranking: 'Govt - Top Tier', specialization: 'Design', website: 'http://www.idc.iitb.ac.in' },
     { name: 'Parsons School of Design', location: 'New York, USA', fees: '$55,000/year', duration: '4 years', ranking: 'Global #1', specialization: 'Design', website: 'https://www.newschool.edu/parsons' },
     { name: 'Royal College of Art', location: 'London, UK', fees: '£30,000/year', duration: '2 years (MA)', ranking: 'Global #1', specialization: 'Design', website: 'https://www.rca.ac.uk' }
-  ],
-  'ca-root': [
-    { name: 'ICAI', location: 'Pan India', fees: '₹25,000 (Total)', duration: '4-5 years', ranking: 'Professional Body', specialization: 'Accounting', website: 'https://www.icai.org' },
-    { name: 'ACCA', location: 'Global', fees: '£1,500 (Total)', duration: '3-4 years', ranking: 'Global Body', specialization: 'Accounting', website: 'https://www.accaglobal.com' }
   ],
   'economics': [
     { name: 'St. Stephens College', location: 'Delhi, India', fees: '₹40,000/year', duration: '3 years', ranking: 'Govt - Top Tier', specialization: 'Economics', website: 'https://www.ststephens.edu' },

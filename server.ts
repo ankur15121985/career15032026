@@ -183,26 +183,39 @@ export async function createServer() {
   });
 
   app.post("/api/appointments", async (req, res) => {
+    console.log("[API] POST /api/appointments - body:", JSON.stringify(req.body));
     try {
       const appointmentData = req.body;
+      if (!appointmentData || Object.keys(appointmentData).length === 0) {
+        return res.status(400).json({ error: "Empty appointment data" });
+      }
+
       const id = 'appt-' + Date.now();
       const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
       
       // Save to file
       let appointments = [];
-      if (existsSync(APPOINTMENTS_FILE)) {
-        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-        appointments = data ? JSON.parse(data) : [];
+      try {
+        if (existsSync(APPOINTMENTS_FILE)) {
+          const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+          appointments = data ? JSON.parse(data) : [];
+        }
+      } catch (e) {
+        console.warn("[API] Failed to read appointments file, starting fresh");
+        appointments = [];
       }
+
       appointments.push(newAppointment);
       await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(appointments, null, 2));
 
-      // Send email
-      await sendAppointmentEmail(newAppointment);
+      // Send email in background - don't await it to avoid 500 if SMTP fails
+      sendAppointmentEmail(newAppointment).catch(err => {
+        console.error("[API] Background email failed:", err);
+      });
       
       res.json({ success: true, id });
     } catch (error: any) {
-      console.error("[API] Failed:", error.message);
+      console.error("[API] POST /api/appointments Failed:", error);
       res.status(500).json({ error: error.message || "Failed to book appointment" });
     }
   });

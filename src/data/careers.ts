@@ -206,4 +206,36 @@ export const CAREERS: Career[] = [
 
   // VIII. C.A.
   { id: 'ca-root', name: 'Chartered Accountancy (CA)', type: 'leaf', parent_id: 'root', duration: '4-5 years', job_roles: 'Chartered Accountant', is_leaf: true },
+
+  // IX. Vocational Courses
+  { id: 'vocational', name: 'Vocational Courses', type: 'branch', parent_id: 'root', duration: null, job_roles: null, is_leaf: false },
+  { id: 'fashion-design', name: 'Fashion Designing', type: 'leaf', parent_id: 'vocational', duration: '3 years', job_roles: 'Fashion Designer', is_leaf: true },
+  { id: 'jewelry-design', name: 'Jewelry Designing', type: 'leaf', parent_id: 'vocational', duration: '3 years', job_roles: 'Jewelry Designer', is_leaf: true },
+  { id: 'animation-vfx', name: 'Animation & VFX', type: 'leaf', parent_id: 'vocational', duration: '3 years', job_roles: 'Animator, VFX Artist', is_leaf: true },
+  { id: 'photography', name: 'Professional Photography', type: 'leaf', parent_id: 'vocational', duration: '1-2 years', job_roles: 'Photographer', is_leaf: true },
+  { id: 'culinary-arts', name: 'Culinary Arts', type: 'leaf', parent_id: 'vocational', duration: '3 years', job_roles: 'Chef, Restaurateur', is_leaf: true },
+
+  // X. Diploma Courses (After 10th/12th)
+  { id: 'diploma', name: 'Diploma Courses', type: 'branch', parent_id: 'root', duration: null, job_roles: null, is_leaf: false },
+  { id: 'polytechnic', name: 'Polytechnic Diploma', type: 'branch', parent_id: 'diploma', duration: '3 years', job_roles: null, is_leaf: false },
+  { id: 'poly-mech', name: 'Diploma in Mechanical', type: 'leaf', parent_id: 'polytechnic', duration: '3 years', job_roles: 'Junior Engineer', is_leaf: true },
+  { id: 'poly-civil', name: 'Diploma in Civil', type: 'leaf', parent_id: 'polytechnic', duration: '3 years', job_roles: 'Junior Civil Engineer', is_leaf: true },
+  { id: 'poly-cs', name: 'Diploma in Computer Science', type: 'leaf', parent_id: 'polytechnic', duration: '3 years', job_roles: 'IT Support, Junior Developer', is_leaf: true },
+  { id: 'paramedical-diploma', name: 'Paramedical Diploma', type: 'leaf', parent_id: 'diploma', duration: '2 years', job_roles: 'Lab Assistant', is_leaf: true },
+
+  // XI. Defense Services
+  { id: 'defense', name: 'Defense Services', type: 'branch', parent_id: 'root', duration: null, job_roles: null, is_leaf: false },
+  { id: 'nda', name: 'NDA (Army/Navy/Airforce)', type: 'leaf', parent_id: 'defense', duration: '3 years', job_roles: 'Officer', is_leaf: true },
+  { id: 'indian-army', name: 'Indian Army (TES)', type: 'leaf', parent_id: 'defense', duration: '4 years', job_roles: 'Lieutenant', is_leaf: true },
+
+  // XII. Media & Communication
+  { id: 'media-comm', name: 'Media & Communication', type: 'branch', parent_id: 'root', duration: null, job_roles: null, is_leaf: false },
+  { id: 'mass-comm-degree', name: 'B.A. Mass Communication', type: 'leaf', parent_id: 'media-comm', duration: '3 years', job_roles: 'Media Professional', is_leaf: true },
+  { id: 'pr-advertising', name: 'PR & Advertising', type: 'leaf', parent_id: 'media-comm', duration: '3 years', job_roles: 'PR Consultant', is_leaf: true },
+  { id: 'digital-marketing', name: 'Digital Marketing', type: 'leaf', parent_id: 'media-comm', duration: '1-3 years', job_roles: 'SEO Specialist, Content Marketer', is_leaf: true },
+
+  // XIII. Sports & Fitness
+  { id: 'sports-fitness', name: 'Sports & Fitness', type: 'branch', parent_id: 'root', duration: null, job_roles: null, is_leaf: false },
+  { id: 'sports-mgmt', name: 'Sports Management', type: 'leaf', parent_id: 'sports-fitness', duration: '3 years', job_roles: 'Sports Manager', is_leaf: true },
+  { id: 'fitness-training', name: 'Fitness & Nutrition', type: 'leaf', parent_id: 'sports-fitness', duration: '1-2 years', job_roles: 'Fitness Trainer', is_leaf: true },
 ];
