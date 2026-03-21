@@ -5,7 +5,6 @@ import Home from './pages/Home';
 import GraphPage from './pages/GraphPage';
 import Quiz from './pages/Quiz';
 import Result from './pages/Result';
-import AdminPage from './pages/AdminPage';
 
 const App: React.FC = () => {
   return (
@@ -17,7 +16,6 @@ const App: React.FC = () => {
           <Route path="quiz" element={<Quiz />} />
           <Route path="result" element={<Result />} />
         </Route>
-        <Route path="/admin" element={<AdminPage />} />
       </Routes>
     </Router>
   );

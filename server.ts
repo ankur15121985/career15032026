@@ -3,9 +3,7 @@ import nodemailer from "nodemailer";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import cors from "cors";
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -82,16 +80,18 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+const app = express();
+const PORT = 3000;
+
+export async function createServer() {
+  app.use(cors());
   app.use(express.json());
 
   // In-memory visitor counter
   let visitorCount = 1250;
 
   // Visitor Tracking
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     if (req.path === '/' || req.path === '/index.html') {
       visitorCount++;
     }
@@ -99,12 +99,12 @@ async function startServer() {
   });
 
   // Health Check
-  app.get("/api/health", (req, res) => {
+  app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
   // Visitor Count
-  app.get("/api/visitor-count", (req, res) => {
+  app.get("/api/visitor-count", (_req, res) => {
     console.log(`[API] GET /api/visitor-count - current count: ${visitorCount}`);
     res.json({ count: visitorCount });
   });
@@ -122,7 +122,7 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -131,14 +131,24 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  return app;
+}
+
+// Only start the server if this file is run directly or in development
+const isMain = import.meta.url.startsWith('file:') && 
+               (path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]));
+
+if (isMain || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+  createServer().then((app) => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
   });
 }
 
-startServer();
+export default app;

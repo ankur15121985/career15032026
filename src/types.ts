@@ -1,4 +1,5 @@
 export interface University {
+  id?: string;
   name: string;
   fees: string;
   duration?: string;

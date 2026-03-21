@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CareerNode, University } from '../types';
 import { motion } from 'motion/react';
 import { X, GraduationCap, Clock, DollarSign, MapPin, Info, Loader2, ExternalLink } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { COLLEGES } from '../data/colleges';
 
 interface SidePanelProps {
   node: CareerNode | null;
@@ -38,51 +37,19 @@ const SidePanel: React.FC<SidePanelProps> = ({ node, onClose, flatCareers = [] }
           addDescendants(node.id);
         }
 
-        // Fetch from Firestore for all target IDs
-        // Firestore 'in' query supports up to 30 items.
-        // If we have more, we might need multiple queries.
-        // For now, let's assume it's within limits or handle it simply.
-        let firestoreUnis: any[] = [];
-        
-        if (targetIds.length <= 30) {
-          const q = query(collection(db, 'colleges'), where('career_id', 'in', targetIds));
-          const querySnapshot = await getDocs(q);
-          firestoreUnis = querySnapshot.docs.map(doc => ({
-            ...(doc.data() as any),
-            id: doc.id
-          }));
-        } else {
-          // Fallback for many IDs: fetch all and filter client-side (not ideal but safe)
-          // Or just fetch in chunks of 30.
-          const chunks = [];
-          for (let i = 0; i < targetIds.length; i += 30) {
-            chunks.push(targetIds.slice(i, i + 30));
-          }
-          
-          const results = await Promise.all(chunks.map(chunk => 
-            getDocs(query(collection(db, 'colleges'), where('career_id', 'in', chunk)))
-          ));
-          
-          results.forEach(snapshot => {
-            snapshot.docs.forEach(doc => {
-              firestoreUnis.push({
-                ...(doc.data() as any),
-                id: doc.id
-              });
-            });
-          });
-        }
+        // Use local static data instead of Firebase
+        const localUnis = COLLEGES.filter(c => targetIds.includes(c.career_id));
 
         // Combine with node's own universities if any
         const nodeUnis = node.universities || [];
         
         // Use a Map to deduplicate by name or ID
-        const allUnis = [...nodeUnis, ...firestoreUnis];
+        const allUnis = [...nodeUnis, ...localUnis];
         const uniqueUnis = Array.from(new Map(allUnis.map(item => [item.id || item.name, item])).values());
         
         setUniversities(uniqueUnis as University[]);
       } catch (error) {
-        console.error("Error fetching universities:", error);
+        console.error("Error loading universities:", error);
       } finally {
         setLoading(false);
       }

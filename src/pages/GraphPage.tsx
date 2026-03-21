@@ -5,10 +5,7 @@ import { CareerNode } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 import { buildTree } from '../data/defaultCareers';
 import { Filter, Search, Clock, GraduationCap, X } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
-
-import { seedDatabase } from '../services/seedService';
+import { CAREERS } from '../data/careers';
 
 const GraphPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<CareerNode | null>(null);
@@ -27,18 +24,10 @@ const GraphPage: React.FC = () => {
     const fetchCareers = async () => {
       setLoading(true);
       try {
-        // Seed database if empty
-        await seedDatabase();
-
-        const q = query(collection(db, 'careers'));
-        const querySnapshot = await getDocs(q);
-        const careersData = querySnapshot.docs.map((doc) => ({
-          ...(doc.data() as any),
-          id: doc.id
-        }));
-        setFlatCareers(careersData);
+        // Use local static data instead of Firebase
+        setFlatCareers(CAREERS);
       } catch (error) {
-        console.error("Error fetching careers:", error);
+        console.error("Error loading careers:", error);
       } finally {
         setLoading(false);
       }

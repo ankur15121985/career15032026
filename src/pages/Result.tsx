@@ -3,8 +3,7 @@ import { useLocation, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, User, X, Clock, ExternalLink, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { db } from '../firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { COLLEGES } from '../data/colleges';
 
 const Result: React.FC = () => {
   const location = useLocation();
@@ -91,20 +90,12 @@ const Result: React.FC = () => {
           .filter(Boolean);
 
         if (targetCareerIds.length > 0) {
-          const q = query(
-            collection(db, 'colleges'),
-            where('career_id', 'in', targetCareerIds),
-            limit(6)
-          );
-          const querySnapshot = await getDocs(q);
-          const collegesData = querySnapshot.docs.map(doc => ({
-            ...(doc.data() as any),
-            id: doc.id
-          }));
-          setRecommendedColleges(collegesData);
+          // Use local static data instead of Firebase
+          const filteredColleges = COLLEGES.filter(c => targetCareerIds.includes(c.career_id)).slice(0, 6);
+          setRecommendedColleges(filteredColleges);
         }
       } catch (error) {
-        console.error("Error fetching recommended colleges:", error);
+        console.error("Error loading recommended colleges:", error);
       } finally {
         setLoadingColleges(false);
       }
