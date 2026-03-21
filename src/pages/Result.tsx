@@ -104,7 +104,21 @@ const Result: React.FC = () => {
     };
 
     fetchColleges();
-  }, [recommendations]);
+    
+    // Auto-send results email
+    const sendResults = async () => {
+      if (contactInfo?.email) {
+        await dataService.sendResultsEmail({
+          user_email: contactInfo.email,
+          user_name: contactInfo.name,
+          aq_score: aqScore,
+          iq_score: iqScore,
+          recommendations: recommendations
+        });
+      }
+    };
+    sendResults();
+  }, [recommendations, contactInfo, aqScore, iqScore]);
 
   const handleConfirmAppointment = async () => {
     if (!appointmentTime) {

@@ -142,5 +142,32 @@ export const dataService = {
       console.error("[DataService] Error deleting appointment:", error);
       return false;
     }
+  },
+
+  sendResultsEmail: async (data: any): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/send-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      return res.ok;
+    } catch (error) {
+      console.error("[DataService] Error sending results email:", error);
+      return false;
+    }
+  },
+
+  getVisitors: async (): Promise<any[]> => {
+    try {
+      const res = await fetch('/api/visitors');
+      if (res.ok) {
+        return await res.json();
+      }
+      return [];
+    } catch (error) {
+      console.error("[DataService] Error getting visitors:", error);
+      return [];
+    }
   }
 };

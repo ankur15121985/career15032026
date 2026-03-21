@@ -15,10 +15,12 @@ if (!existsSync(DATA_DIR)) {
 
 const CAREERS_FILE = path.join(DATA_DIR, 'careers.json');
 const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
+const VISITORS_FILE = path.join(DATA_DIR, 'visitors.json');
 
 // In-memory fallback for Vercel/Read-only filesystems
 let memoryCareers: any[] = [];
 let memoryAppointments: any[] = [];
+let memoryVisitors: any[] = [];
 
 // Initialize files if they don't exist
 const initializeData = async () => {
@@ -38,6 +40,14 @@ const initializeData = async () => {
     } else {
       console.log("[Server] Creating appointments.json");
       writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
+    }
+
+    if (existsSync(VISITORS_FILE)) {
+      const data = await fs.readFile(VISITORS_FILE, 'utf-8');
+      memoryVisitors = data ? JSON.parse(data) : [];
+    } else {
+      console.log("[Server] Creating visitors.json");
+      writeFileSync(VISITORS_FILE, JSON.stringify([], null, 2));
     }
   } catch (e) {
     console.warn("[Server] File system initialization failed, using in-memory storage only:", e);
@@ -122,6 +132,61 @@ const sendAppointmentEmail = async (appointment: any) => {
   }
 };
 
+const sendResultsEmail = async (data: any) => {
+  const mailTransporter = getTransporter();
+  if (!mailTransporter) return;
+
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@careersirji.com';
+  const { user_email, user_name, aq_score, iq_score, recommendations } = data;
+
+  const mailOptions = {
+    from: `"CareerSirji" <${from}>`,
+    to: user_email,
+    subject: "Your Career Assessment Results - CareerSirji",
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e2e8f0;border-radius:12px;">
+        <h2 style="color:#4f46e5;">Your Career Assessment Results</h2>
+        <p>Hello <strong>${user_name}</strong>,</p>
+        <p>Thank you for taking the CareerSirji assessment. Here are your results:</p>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0;">
+          <div style="background:#f0fdf4;padding:15px;border-radius:8px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase;">AQ Score</p>
+            <p style="margin:5px 0;font-size:24px;font-weight:bold;color:#14532d;">${aq_score}%</p>
+          </div>
+          <div style="background:#fffbeb;padding:15px;border-radius:8px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase;">IQ Score</p>
+            <p style="margin:5px 0;font-size:24px;font-weight:bold;color:#78350f;">${iq_score}%</p>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc;padding:20px;border-radius:8px;margin:20px 0;">
+          <h3 style="margin-top:0;color:#1e293b;">Top Recommendations:</h3>
+          <ul style="padding-left:20px;color:#334155;">
+            ${recommendations.map((r: string) => `<li style="margin-bottom:5px;">${r}</li>`).join('')}
+          </ul>
+        </div>
+
+        <p>We recommend booking a consultation with our expert to discuss these paths in detail.</p>
+        
+        <div style="text-align:center;margin-top:30px;">
+          <a href="https://careersirji.com" style="background:#4f46e5;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;">Visit CareerSirji</a>
+        </div>
+
+        <hr style="border:0;border-top:1px solid #e2e8f0;margin:30px 0;"/>
+        <p style="font-size:12px;color:#64748b;">Automated message from CareerSirji. Do not reply.</p>
+      </div>
+    `
+  };
+
+  try {
+    const info = await mailTransporter.sendMail(mailOptions);
+    console.log(`[Email] Results Sent! ID: ${info.messageId}`);
+  } catch (error: any) {
+    console.error("[Email] Results Failed:", error);
+  }
+};
+
 const app = express();
 const PORT = 3000;
 
@@ -129,13 +194,32 @@ export async function createServer() {
   app.use(cors());
   app.use(express.json());
 
-  // In-memory visitor counter
-  let visitorCount = 1250;
-
   // Visitor Tracking
-  app.use((req, _res, next) => {
-    if (req.path === '/' || req.path === '/index.html') {
-      visitorCount++;
+  app.use(async (req, _res, next) => {
+    // Track unique IP addresses for main page visits
+    if (req.path === '/' || req.path === '/index.html' || req.path === '/api/visitor-count') {
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const ipString = Array.isArray(ip) ? ip[0] : ip;
+      
+      const existingVisitor = memoryVisitors.find(v => v.ip === ipString);
+      if (!existingVisitor) {
+        const newVisitor = {
+          ip: ipString,
+          userAgent: req.headers['user-agent'],
+          timestamp: new Date().toISOString(),
+          visits: 1
+        };
+        memoryVisitors.push(newVisitor);
+        try {
+          await fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2));
+        } catch (e) {
+          console.warn("[Server] Failed to save visitors to file");
+        }
+      } else {
+        existingVisitor.visits = (existingVisitor.visits || 1) + 1;
+        existingVisitor.lastVisit = new Date().toISOString();
+        // We don't necessarily need to save on every visit, but for unique IP tracking it's fine
+      }
     }
     next();
   });
@@ -147,8 +231,34 @@ export async function createServer() {
 
   // Visitor Count
   app.get("/api/visitor-count", (_req, res) => {
-    console.log(`[API] GET /api/visitor-count - current count: ${visitorCount}`);
-    res.json({ count: visitorCount });
+    res.json({ 
+      count: memoryVisitors.length,
+      totalVisits: memoryVisitors.reduce((sum, v) => sum + (v.visits || 1), 0)
+    });
+  });
+
+  // Visitors List (Admin only)
+  app.get("/api/visitors", (_req, res) => {
+    res.json(memoryVisitors);
+  });
+
+  // Send Results Email
+  app.post("/api/send-results", async (req, res) => {
+    try {
+      const data = req.body;
+      if (!data || !data.user_email) {
+        return res.status(400).json({ error: "Missing email data" });
+      }
+      
+      // Send email in background
+      sendResultsEmail(data).catch(err => {
+        console.error("[API] Background results email failed:", err);
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to send results email" });
+    }
   });
 
   // Careers API
