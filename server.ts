@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import fs from "fs/promises";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 
 // Ensure data directory exists
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -22,36 +22,82 @@ let memoryCareers: any[] = [];
 let memoryAppointments: any[] = [];
 let memoryVisitors: any[] = [];
 
+// Vercel KV (Redis) Helper - No dependency version using fetch
+const kv = {
+  async exec(command: any[]) {
+    const url = process.env.KV_REST_API_URL;
+    const token = process.env.KV_REST_API_TOKEN;
+    if (!url || !token) return null;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(command)
+      });
+      const data = await res.json();
+      return data.result;
+    } catch (e) {
+      console.error(`[KV] Command ${command[0]} failed:`, e);
+      return null;
+    }
+  },
+  async get(key: string) {
+    const result = await this.exec(['GET', key]);
+    return result ? JSON.parse(result) : null;
+  },
+  async set(key: string, value: any) {
+    return await this.exec(['SET', key, JSON.stringify(value)]);
+  }
+};
+
 // Initialize files if they don't exist
 const initializeData = async () => {
-  console.log("[Server] Initializing data files...");
-  try {
-    if (existsSync(CAREERS_FILE)) {
-      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
-      memoryCareers = data ? JSON.parse(data) : [];
-    } else {
-      console.log("[Server] Creating careers.json");
-      writeFileSync(CAREERS_FILE, JSON.stringify([], null, 2));
-    }
-    
-    if (existsSync(APPOINTMENTS_FILE)) {
-      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-      memoryAppointments = data ? JSON.parse(data) : [];
-    } else {
-      console.log("[Server] Creating appointments.json");
-      writeFileSync(APPOINTMENTS_FILE, JSON.stringify([], null, 2));
-    }
+  console.log("[Server] Initializing data...");
+  
+  // Try Vercel KV first
+  const kvCareers = await kv.get('careers');
+  const kvAppointments = await kv.get('appointments');
+  const kvVisitors = await kv.get('visitors');
 
-    if (existsSync(VISITORS_FILE)) {
-      const data = await fs.readFile(VISITORS_FILE, 'utf-8');
-      memoryVisitors = data ? JSON.parse(data) : [];
-    } else {
-      console.log("[Server] Creating visitors.json");
-      writeFileSync(VISITORS_FILE, JSON.stringify([], null, 2));
-    }
-  } catch (e) {
-    console.warn("[Server] File system initialization failed, using in-memory storage only:", e);
+  if (kvCareers) {
+    memoryCareers = kvCareers;
+    console.log("[Server] Loaded careers from Vercel KV");
+  } else {
+    try {
+      if (existsSync(CAREERS_FILE)) {
+        const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+        memoryCareers = data ? JSON.parse(data) : [];
+      }
+    } catch (e) {}
   }
+
+  if (kvAppointments) {
+    memoryAppointments = kvAppointments;
+    console.log("[Server] Loaded appointments from Vercel KV");
+  } else {
+    try {
+      if (existsSync(APPOINTMENTS_FILE)) {
+        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+        memoryAppointments = data ? JSON.parse(data) : [];
+      }
+    } catch (e) {}
+  }
+
+  if (kvVisitors) {
+    memoryVisitors = kvVisitors;
+    console.log("[Server] Loaded visitors from Vercel KV");
+  } else {
+    try {
+      if (existsSync(VISITORS_FILE)) {
+        const data = await fs.readFile(VISITORS_FILE, 'utf-8');
+        memoryVisitors = data ? JSON.parse(data) : [];
+      }
+    } catch (e) {}
+  }
+  
   console.log("[Server] Data initialization complete");
 };
 
@@ -212,14 +258,16 @@ export async function createServer() {
         };
         memoryVisitors.push(newVisitor);
         try {
+          await kv.set('visitors', memoryVisitors);
           await fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2));
         } catch (e) {
-          console.warn("[Server] Failed to save visitors to file");
+          console.warn("[Server] Failed to save visitors");
         }
       } else {
         existingVisitor.visits = (existingVisitor.visits || 1) + 1;
         existingVisitor.lastVisit = new Date().toISOString();
-        // We don't necessarily need to save on every visit, but for unique IP tracking it's fine
+        // Save updates to KV
+        await kv.set('visitors', memoryVisitors);
       }
     }
     next();
@@ -288,9 +336,10 @@ export async function createServer() {
       }
       memoryCareers = careers;
       try {
+        await kv.set('careers', careers);
         await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
       } catch (e) {
-        console.warn("[API] Failed to save careers to file, saved in memory only");
+        console.warn("[API] Failed to save careers");
       }
       res.json({ success: true });
     } catch (error: any) {
@@ -328,9 +377,10 @@ export async function createServer() {
       memoryAppointments.push(newAppointment);
       
       try {
+        await kv.set('appointments', memoryAppointments);
         await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
       } catch (e) {
-        console.warn("[API] Failed to save appointments to file, saved in memory only");
+        console.warn("[API] Failed to save appointments");
       }
 
       // Send email
@@ -353,9 +403,10 @@ export async function createServer() {
       const { id } = req.params;
       memoryAppointments = memoryAppointments.filter((a: any) => a.id !== id);
       try {
+        await kv.set('appointments', memoryAppointments);
         await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
       } catch (e) {
-        console.warn("[API] Failed to delete appointment from file, updated in memory only");
+        console.warn("[API] Failed to update appointments after delete");
       }
       res.json({ success: true });
     } catch (error: any) {
