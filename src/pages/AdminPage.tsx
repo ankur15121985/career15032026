@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { dataService } from '../services/dataService';
 import { 
-  LayoutDashboard, 
   Users, 
   Network, 
   LogOut, 
@@ -104,9 +103,15 @@ const AdminPage: React.FC = () => {
   };
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (isAuthenticated) {
       fetchData();
+      // Auto-refresh data every 30 seconds
+      interval = setInterval(fetchData, 30000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isAuthenticated]);
 
   const saveCareers = async (updatedCareers: any[]) => {
@@ -192,8 +197,8 @@ const AdminPage: React.FC = () => {
           className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-[2rem] shadow-2xl"
         >
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <LayoutDashboard className="w-8 h-8 text-white" />
+            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/20 overflow-hidden">
+              <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain p-2" />
             </div>
             <h1 className="text-2xl font-display font-bold text-white">Admin Access</h1>
             <p className="text-slate-400 text-sm mt-2">Enter your credentials to manage CareerSirji</p>
@@ -239,8 +244,8 @@ const AdminPage: React.FC = () => {
       <div className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <LayoutDashboard className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md overflow-hidden">
+              <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain p-1" />
             </div>
             <span className="font-display font-bold text-slate-900 dark:text-white">Admin Panel</span>
           </div>

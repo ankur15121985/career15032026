@@ -25,11 +25,24 @@ let memoryVisitors: any[] = [];
 // Vercel KV (Redis) Helper - No dependency version using fetch
 const kv = {
   async exec(command: any[]) {
-    const url = process.env.KV_REST_API_URL;
-    const token = process.env.KV_REST_API_TOKEN;
+    const url = (process.env.KV_REST_API_URL || "").trim().replace(/^["']|["']$/g, "");
+    const token = (process.env.KV_REST_API_TOKEN || "").trim().replace(/^["']|["']$/g, "");
     if (!url || !token) return null;
+    
+    // Ensure URL is valid and has a protocol
+    let finalUrl = url;
+    if (!url.startsWith('http')) {
+      finalUrl = `https://${url}`;
+    }
+    
     try {
-      const res = await fetch(url, {
+      finalUrl = new URL(finalUrl).toString();
+    } catch (e) {
+      console.error(`[KV] Invalid URL: ${finalUrl}`);
+      return null;
+    }
+    try {
+      const res = await fetch(finalUrl, {
         method: 'POST',
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -53,49 +66,46 @@ const kv = {
   }
 };
 
-// Initialize files if they don't exist
+// Initialize data from KV or File
 const initializeData = async () => {
   console.log("[Server] Initializing data...");
   
-  // Try Vercel KV first
-  const kvCareers = await kv.get('careers');
-  const kvAppointments = await kv.get('appointments');
-  const kvVisitors = await kv.get('visitors');
+  try {
+    // Try Vercel KV first
+    const [kvCareers, kvAppointments, kvVisitors] = await Promise.all([
+      kv.get('careers'),
+      kv.get('appointments'),
+      kv.get('visitors')
+    ]);
 
-  if (kvCareers) {
-    memoryCareers = kvCareers;
-    console.log("[Server] Loaded careers from Vercel KV");
-  } else {
-    try {
-      if (existsSync(CAREERS_FILE)) {
-        const data = await fs.readFile(CAREERS_FILE, 'utf-8');
-        memoryCareers = data ? JSON.parse(data) : [];
-      }
-    } catch (e) {}
-  }
+    if (kvCareers) {
+      memoryCareers = kvCareers;
+      console.log("[Server] Loaded careers from Vercel KV");
+    } else if (existsSync(CAREERS_FILE)) {
+      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+      memoryCareers = data ? JSON.parse(data) : [];
+      console.log("[Server] Loaded careers from local file");
+    }
 
-  if (kvAppointments) {
-    memoryAppointments = kvAppointments;
-    console.log("[Server] Loaded appointments from Vercel KV");
-  } else {
-    try {
-      if (existsSync(APPOINTMENTS_FILE)) {
-        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-        memoryAppointments = data ? JSON.parse(data) : [];
-      }
-    } catch (e) {}
-  }
+    if (kvAppointments) {
+      memoryAppointments = kvAppointments;
+      console.log("[Server] Loaded appointments from Vercel KV");
+    } else if (existsSync(APPOINTMENTS_FILE)) {
+      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+      memoryAppointments = data ? JSON.parse(data) : [];
+      console.log("[Server] Loaded appointments from local file");
+    }
 
-  if (kvVisitors) {
-    memoryVisitors = kvVisitors;
-    console.log("[Server] Loaded visitors from Vercel KV");
-  } else {
-    try {
-      if (existsSync(VISITORS_FILE)) {
-        const data = await fs.readFile(VISITORS_FILE, 'utf-8');
-        memoryVisitors = data ? JSON.parse(data) : [];
-      }
-    } catch (e) {}
+    if (kvVisitors) {
+      memoryVisitors = kvVisitors;
+      console.log("[Server] Loaded visitors from Vercel KV, count:", memoryVisitors.length);
+    } else if (existsSync(VISITORS_FILE)) {
+      const data = await fs.readFile(VISITORS_FILE, 'utf-8');
+      memoryVisitors = data ? JSON.parse(data) : [];
+      console.log("[Server] Loaded visitors from local file, count:", memoryVisitors.length);
+    }
+  } catch (e) {
+    console.error("[Server] Data initialization failed:", e);
   }
   
   console.log("[Server] Data initialization complete");
@@ -107,10 +117,10 @@ initializeData();
 let transporter: nodemailer.Transporter | null = null;
 
 const getTransporter = () => {
-  const host = (process.env.SMTP_HOST || "").trim();
+  const host = (process.env.SMTP_HOST || "").trim().replace(/^["']|["']$/g, "");
   const port = parseInt((process.env.SMTP_PORT || "587").trim());
-  const user = (process.env.SMTP_USER || "").trim();
-  const pass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+  const user = (process.env.SMTP_USER || "").trim().replace(/^["']|["']$/g, "");
+  const pass = (process.env.SMTP_PASS || "").trim().replace(/^["']|["']$/g, "");
 
   if (!transporter) {
     if (!host || !user || !pass) {
@@ -244,9 +254,12 @@ export async function createServer() {
   // Visitor Tracking
   app.use(async (req, _res, next) => {
     // Track unique IP addresses for main page visits
-    if (req.path === '/' || req.path === '/index.html' || req.path === '/api/visitor-count') {
+    const trackPaths = ['/', '/index.html', '/api/visitor-count'];
+    if (trackPaths.includes(req.path)) {
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-      const ipString = Array.isArray(ip) ? ip[0] : ip;
+      const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+      
+      console.log(`[Visitor] Tracking request from IP: ${ipString} for path: ${req.path}`);
       
       const existingVisitor = memoryVisitors.find(v => v.ip === ipString);
       if (!existingVisitor) {
@@ -254,20 +267,26 @@ export async function createServer() {
           ip: ipString,
           userAgent: req.headers['user-agent'],
           timestamp: new Date().toISOString(),
-          visits: 1
+          visits: 1,
+          lastVisit: new Date().toISOString()
         };
         memoryVisitors.push(newVisitor);
+        console.log(`[Visitor] New unique visitor added. Total: ${memoryVisitors.length}`);
+        
         try {
-          await kv.set('visitors', memoryVisitors);
-          await fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2));
+          // Fire and forget KV update to not block request
+          kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to save new visitor:", e));
+          fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2)).catch(() => {});
         } catch (e) {
-          console.warn("[Server] Failed to save visitors");
+          console.warn("[Server] Failed to trigger visitor save");
         }
       } else {
         existingVisitor.visits = (existingVisitor.visits || 1) + 1;
         existingVisitor.lastVisit = new Date().toISOString();
+        console.log(`[Visitor] Existing visitor updated. IP: ${ipString}, Total Visits: ${existingVisitor.visits}`);
+        
         // Save updates to KV
-        await kv.set('visitors', memoryVisitors);
+        kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to update existing visitor:", e));
       }
     }
     next();
@@ -437,9 +456,11 @@ const isMain = import.meta.url.startsWith('file:') &&
                (path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]));
 
 if (isMain || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-  createServer().then((app) => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+  initializeData().then(() => {
+    createServer().then((app) => {
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
     });
   });
 }

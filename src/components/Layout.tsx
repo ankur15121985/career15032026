@@ -25,16 +25,7 @@ const Layout: React.FC = () => {
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-11 h-11 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform overflow-hidden">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
-                // Fallback if logo.png is missing
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement!.innerHTML = `
-                  <svg viewBox="0 0 100 100" class="w-8 h-8 text-indigo-600 fill-current">
-                    <path d="M20 40 L50 25 L80 40 L50 55 Z M50 55 L50 75 M35 48 L35 65 C35 65 50 75 65 65 L65 48" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
-                    <path d="M40 80 L60 60 L75 75 M60 60 L60 45 M60 60 L75 60" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                `;
-              }} />
+              <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain p-1" />
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-display font-bold text-slate-900 dark:text-white tracking-tight leading-none">Career Sirji</span>

@@ -75,10 +75,7 @@ const Home: React.FC = () => {
               className="mb-8 flex justify-center"
             >
               <div className="w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center p-3 overflow-hidden">
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = '<svg viewBox="0 0 24 24" class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>';
-                }} />
+                <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
               </div>
             </motion.div>
 
