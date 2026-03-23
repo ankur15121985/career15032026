@@ -66,8 +66,12 @@ const kv = {
   }
 };
 
+let isInitialized = false;
+let initializationPromise: Promise<void> | null = null;
+
 // Initialize data from KV or File
 const initializeData = async () => {
+  if (isInitialized) return;
   console.log("[Server] Initializing data...");
   
   try {
@@ -104,14 +108,15 @@ const initializeData = async () => {
       memoryVisitors = data ? JSON.parse(data) : [];
       console.log("[Server] Loaded visitors from local file, count:", memoryVisitors.length);
     }
+    isInitialized = true;
+    console.log("[Server] Data initialization complete");
   } catch (e) {
     console.error("[Server] Data initialization failed:", e);
   }
-  
-  console.log("[Server] Data initialization complete");
 };
 
-initializeData();
+// Start initialization immediately
+initializationPromise = initializeData();
 
 // Email Transporter Helper
 let transporter: nodemailer.Transporter | null = null;
@@ -247,191 +252,236 @@ const sendResultsEmail = async (data: any) => {
 const app = express();
 const PORT = 3000;
 
+// Middleware to ensure data is initialized before handling requests
+app.use(async (req, _res, next) => {
+  if (!isInitialized && initializationPromise) {
+    await initializationPromise;
+  }
+  next();
+});
+
+app.use(cors());
+app.use(express.json());
+
+// Visitor Tracking
+app.use(async (req, _res, next) => {
+  // Track unique IP addresses for main page visits and other entry points
+  // Only track GET requests for non-API and non-static assets
+  const isGet = req.method === 'GET';
+  const isApi = req.path.startsWith('/api/');
+  const isStatic = req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i);
+  
+  if (isGet && !isApi && !isStatic) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+    
+    console.log(`[Visitor] Tracking request from IP: ${ipString} for path: ${req.path}`);
+    
+    const existingVisitor = memoryVisitors.find(v => v.ip === ipString);
+    if (!existingVisitor) {
+      const newVisitor = {
+        ip: ipString,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString(),
+        visits: 1,
+        lastVisit: new Date().toISOString()
+      };
+      memoryVisitors.push(newVisitor);
+      console.log(`[Visitor] New unique visitor added. Total: ${memoryVisitors.length}`);
+      
+      try {
+        // Fire and forget KV update to not block request
+        kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to save new visitor:", e));
+        fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2)).catch(() => {});
+      } catch (e) {
+        console.warn("[Server] Failed to trigger visitor save");
+      }
+    } else {
+      existingVisitor.visits = (existingVisitor.visits || 1) + 1;
+      existingVisitor.lastVisit = new Date().toISOString();
+      console.log(`[Visitor] Existing visitor updated. IP: ${ipString}, Total Visits: ${existingVisitor.visits}`);
+      
+      // Save updates to KV
+      kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to update existing visitor:", e));
+    }
+  }
+  next();
+});
+
+// Track Visit (Manual call from frontend)
+app.post("/api/track-visit", (req, res) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+  
+  console.log(`[Visitor] Manual tracking request from IP: ${ipString}`);
+  
+  const existingVisitor = memoryVisitors.find(v => v.ip === ipString);
+  if (!existingVisitor) {
+    const newVisitor = {
+      ip: ipString,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString(),
+      visits: 1,
+      lastVisit: new Date().toISOString()
+    };
+    memoryVisitors.push(newVisitor);
+    console.log(`[Visitor] New unique visitor added (manual). Total: ${memoryVisitors.length}`);
+    
+    kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to save new visitor:", e));
+    fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2)).catch(() => {});
+  } else {
+    existingVisitor.visits = (existingVisitor.visits || 1) + 1;
+    existingVisitor.lastVisit = new Date().toISOString();
+    console.log(`[Visitor] Existing visitor updated (manual). IP: ${ipString}, Total Visits: ${existingVisitor.visits}`);
+    
+    kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to update existing visitor:", e));
+  }
+  
+  res.json({ success: true });
+});
+
+// Health Check
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
+// Visitor Count
+app.get("/api/visitor-count", (_req, res) => {
+  res.json({ 
+    count: memoryVisitors.length,
+    totalVisits: memoryVisitors.reduce((sum, v) => sum + (v.visits || 1), 0)
+  });
+});
+
+// Visitors List (Admin only)
+app.get("/api/visitors", (_req, res) => {
+  res.json(memoryVisitors);
+});
+
+// Send Results Email
+app.post("/api/send-results", async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data || !data.user_email) {
+      return res.status(400).json({ error: "Missing email data" });
+    }
+    
+    // Send email
+    try {
+      await sendResultsEmail(data);
+      console.log("[API] Results email sent successfully");
+    } catch (err) {
+      console.error("[API] Results email failed:", err);
+    }
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to send results email" });
+  }
+});
+
+// Careers API
+app.get("/api/careers", async (_req, res) => {
+  try {
+    let careers = memoryCareers;
+    if (existsSync(CAREERS_FILE)) {
+      const data = await fs.readFile(CAREERS_FILE, 'utf-8');
+      careers = data ? JSON.parse(data) : memoryCareers;
+    }
+    res.json(careers);
+  } catch (error: any) {
+    console.warn("[API] Failed to read careers from file, using memory:", error);
+    res.json(memoryCareers);
+  }
+});
+
+app.post("/api/careers", async (req, res) => {
+  try {
+    const careers = req.body;
+    if (!Array.isArray(careers)) {
+      return res.status(400).json({ error: "Invalid data format. Expected an array." });
+    }
+    memoryCareers = careers;
+    try {
+      await kv.set('careers', careers);
+      await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
+    } catch (e) {
+      console.warn("[API] Failed to save careers");
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[API] Failed to save careers:", error);
+    res.status(500).json({ error: "Failed to save careers" });
+  }
+});
+
+// Appointments API
+app.get("/api/appointments", async (_req, res) => {
+  try {
+    let appointments = memoryAppointments;
+    if (existsSync(APPOINTMENTS_FILE)) {
+      const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
+      appointments = data ? JSON.parse(data) : memoryAppointments;
+    }
+    res.json(appointments);
+  } catch (error: any) {
+    console.warn("[API] Failed to read appointments from file, using memory:", error);
+    res.json(memoryAppointments);
+  }
+});
+
+app.post("/api/appointments", async (req, res) => {
+  console.log("[API] POST /api/appointments - body:", JSON.stringify(req.body));
+  try {
+    const appointmentData = req.body;
+    if (!appointmentData || Object.keys(appointmentData).length === 0) {
+      return res.status(400).json({ error: "Empty appointment data" });
+    }
+
+    const id = 'appt-' + Date.now();
+    const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
+    
+    memoryAppointments.push(newAppointment);
+    
+    try {
+      await kv.set('appointments', memoryAppointments);
+      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
+    } catch (e) {
+      console.warn("[API] Failed to save appointments");
+    }
+
+    // Send email
+    try {
+      await sendAppointmentEmail(newAppointment);
+      console.log("[API] Appointment email sent successfully");
+    } catch (err) {
+      console.error("[API] Appointment email failed:", err);
+    }
+    
+    res.json({ success: true, id });
+  } catch (error: any) {
+    console.error("[API] POST /api/appointments Failed:", error);
+    res.status(500).json({ error: "Failed to book appointment" });
+  }
+});
+
+app.delete("/api/appointments/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    memoryAppointments = memoryAppointments.filter((a: any) => a.id !== id);
+    try {
+      await kv.set('appointments', memoryAppointments);
+      await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
+    } catch (e) {
+      console.warn("[API] Failed to update appointments after delete");
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: "Failed to delete appointment" });
+  }
+});
+
 export async function createServer() {
-  app.use(cors());
-  app.use(express.json());
-
-  // Visitor Tracking
-  app.use(async (req, _res, next) => {
-    // Track unique IP addresses for main page visits
-    const trackPaths = ['/', '/index.html', '/api/visitor-count'];
-    if (trackPaths.includes(req.path)) {
-      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-      const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
-      
-      console.log(`[Visitor] Tracking request from IP: ${ipString} for path: ${req.path}`);
-      
-      const existingVisitor = memoryVisitors.find(v => v.ip === ipString);
-      if (!existingVisitor) {
-        const newVisitor = {
-          ip: ipString,
-          userAgent: req.headers['user-agent'],
-          timestamp: new Date().toISOString(),
-          visits: 1,
-          lastVisit: new Date().toISOString()
-        };
-        memoryVisitors.push(newVisitor);
-        console.log(`[Visitor] New unique visitor added. Total: ${memoryVisitors.length}`);
-        
-        try {
-          // Fire and forget KV update to not block request
-          kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to save new visitor:", e));
-          fs.writeFile(VISITORS_FILE, JSON.stringify(memoryVisitors, null, 2)).catch(() => {});
-        } catch (e) {
-          console.warn("[Server] Failed to trigger visitor save");
-        }
-      } else {
-        existingVisitor.visits = (existingVisitor.visits || 1) + 1;
-        existingVisitor.lastVisit = new Date().toISOString();
-        console.log(`[Visitor] Existing visitor updated. IP: ${ipString}, Total Visits: ${existingVisitor.visits}`);
-        
-        // Save updates to KV
-        kv.set('visitors', memoryVisitors).catch(e => console.error("[KV] Failed to update existing visitor:", e));
-      }
-    }
-    next();
-  });
-
-  // Health Check
-  app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // Visitor Count
-  app.get("/api/visitor-count", (_req, res) => {
-    res.json({ 
-      count: memoryVisitors.length,
-      totalVisits: memoryVisitors.reduce((sum, v) => sum + (v.visits || 1), 0)
-    });
-  });
-
-  // Visitors List (Admin only)
-  app.get("/api/visitors", (_req, res) => {
-    res.json(memoryVisitors);
-  });
-
-  // Send Results Email
-  app.post("/api/send-results", async (req, res) => {
-    try {
-      const data = req.body;
-      if (!data || !data.user_email) {
-        return res.status(400).json({ error: "Missing email data" });
-      }
-      
-      // Send email
-      try {
-        await sendResultsEmail(data);
-        console.log("[API] Results email sent successfully");
-      } catch (err) {
-        console.error("[API] Results email failed:", err);
-      }
-      
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to send results email" });
-    }
-  });
-
-  // Careers API
-  app.get("/api/careers", async (_req, res) => {
-    try {
-      let careers = memoryCareers;
-      if (existsSync(CAREERS_FILE)) {
-        const data = await fs.readFile(CAREERS_FILE, 'utf-8');
-        careers = data ? JSON.parse(data) : memoryCareers;
-      }
-      res.json(careers);
-    } catch (error: any) {
-      console.warn("[API] Failed to read careers from file, using memory:", error);
-      res.json(memoryCareers);
-    }
-  });
-
-  app.post("/api/careers", async (req, res) => {
-    try {
-      const careers = req.body;
-      if (!Array.isArray(careers)) {
-        return res.status(400).json({ error: "Invalid data format. Expected an array." });
-      }
-      memoryCareers = careers;
-      try {
-        await kv.set('careers', careers);
-        await fs.writeFile(CAREERS_FILE, JSON.stringify(careers, null, 2));
-      } catch (e) {
-        console.warn("[API] Failed to save careers");
-      }
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("[API] Failed to save careers:", error);
-      res.status(500).json({ error: "Failed to save careers" });
-    }
-  });
-
-  // Appointments API
-  app.get("/api/appointments", async (_req, res) => {
-    try {
-      let appointments = memoryAppointments;
-      if (existsSync(APPOINTMENTS_FILE)) {
-        const data = await fs.readFile(APPOINTMENTS_FILE, 'utf-8');
-        appointments = data ? JSON.parse(data) : memoryAppointments;
-      }
-      res.json(appointments);
-    } catch (error: any) {
-      console.warn("[API] Failed to read appointments from file, using memory:", error);
-      res.json(memoryAppointments);
-    }
-  });
-
-  app.post("/api/appointments", async (req, res) => {
-    console.log("[API] POST /api/appointments - body:", JSON.stringify(req.body));
-    try {
-      const appointmentData = req.body;
-      if (!appointmentData || Object.keys(appointmentData).length === 0) {
-        return res.status(400).json({ error: "Empty appointment data" });
-      }
-
-      const id = 'appt-' + Date.now();
-      const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
-      
-      memoryAppointments.push(newAppointment);
-      
-      try {
-        await kv.set('appointments', memoryAppointments);
-        await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
-      } catch (e) {
-        console.warn("[API] Failed to save appointments");
-      }
-
-      // Send email
-      try {
-        await sendAppointmentEmail(newAppointment);
-        console.log("[API] Appointment email sent successfully");
-      } catch (err) {
-        console.error("[API] Appointment email failed:", err);
-      }
-      
-      res.json({ success: true, id });
-    } catch (error: any) {
-      console.error("[API] POST /api/appointments Failed:", error);
-      res.status(500).json({ error: "Failed to book appointment" });
-    }
-  });
-
-  app.delete("/api/appointments/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      memoryAppointments = memoryAppointments.filter((a: any) => a.id !== id);
-      try {
-        await kv.set('appointments', memoryAppointments);
-        await fs.writeFile(APPOINTMENTS_FILE, JSON.stringify(memoryAppointments, null, 2));
-      } catch (e) {
-        console.warn("[API] Failed to update appointments after delete");
-      }
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to delete appointment" });
-    }
-  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
@@ -455,13 +505,13 @@ export async function createServer() {
 const isMain = import.meta.url.startsWith('file:') && 
                (path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1]));
 
-if (isMain || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
-  initializeData().then(() => {
-    createServer().then((app) => {
+if (isMain || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.VERCEL) {
+  createServer().then((app) => {
+    if (isMain || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
       app.listen(PORT, "0.0.0.0", () => {
         console.log(`Server running on http://localhost:${PORT}`);
       });
-    });
+    }
   });
 }
 

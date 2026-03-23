@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -7,8 +7,14 @@ import Quiz from './pages/Quiz';
 import Result from './pages/Result';
 import AdminPage from './pages/AdminPage';
 import { ThemeProvider } from './context/ThemeContext';
+import { dataService } from './services/dataService';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    // Track visit on app mount
+    dataService.trackVisit().catch(err => console.error("[App] Visit tracking failed:", err));
+  }, []);
+
   return (
     <ThemeProvider>
       <Router>

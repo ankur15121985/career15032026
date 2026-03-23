@@ -169,5 +169,15 @@ export const dataService = {
       console.error("[DataService] Error getting visitors:", error);
       return [];
     }
+  },
+
+  trackVisit: async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/track-visit', { method: 'POST' });
+      return res.ok;
+    } catch (error) {
+      console.error("[DataService] Error tracking visit:", error);
+      return false;
+    }
   }
 };
