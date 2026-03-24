@@ -179,5 +179,34 @@ export const dataService = {
       console.error("[DataService] Error tracking visit:", error);
       return false;
     }
+  },
+
+  uploadAsset: async (type: 'logo' | 'favicon', file: File): Promise<boolean> => {
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const base64 = await base64Promise;
+
+      const res = await fetch('/api/upload-asset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          data: base64,
+          mimeType: file.type
+        })
+      });
+      return res.ok;
+    } catch (error) {
+      console.error("[DataService] Error uploading asset:", error);
+      return false;
+    }
   }
 };

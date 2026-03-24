@@ -13,6 +13,7 @@ const GraphPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<CareerNode | null>(null);
   const [flatCareers, setFlatCareers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isGraphReady, setIsGraphReady] = useState(false);
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,19 +164,71 @@ const GraphPage: React.FC = () => {
     setSelectedNode(node);
   }, []);
 
-  if (loading) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400 font-bold animate-pulse">Loading Career Map...</p>
-        </div>
-      </div>
-    );
-  }
+  const showLoader = loading || !isGraphReady;
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <AnimatePresence>
+        {showLoader && (
+          <motion.div 
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-50 dark:bg-slate-950"
+          >
+            {/* Atmospheric background */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 dark:bg-indigo-500/20 blur-[150px] rounded-full animate-pulse" />
+              <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/10 dark:bg-emerald-500/20 blur-[150px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+            </div>
+
+            <div className="relative flex flex-col items-center gap-8 z-10">
+              <div className="relative">
+                {/* Outer ring */}
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                  className="w-24 h-24 rounded-full border-t-2 border-b-2 border-indigo-600 dark:border-indigo-400"
+                />
+                {/* Inner ring */}
+                <motion.div 
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-2 rounded-full border-r-2 border-l-2 border-emerald-500 dark:border-emerald-400"
+                />
+                {/* Center dot */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-ping" />
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <motion.h2 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-2xl font-display font-bold tracking-tight text-slate-900 dark:text-white"
+                >
+                  Career<span className="text-indigo-600 dark:text-indigo-400">Map</span>
+                </motion.h2>
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-32 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '100%' }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      className="h-full w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mt-2">
+                  Initializing Neural Pathways
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Massive Background Typography (Recipe 2) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none">
         <motion.div
@@ -332,6 +385,7 @@ const GraphPage: React.FC = () => {
           data={filteredTree} 
           onNodeClick={handleNodeClick} 
           expandAll={expandAllNodes || searchQuery !== '' || selectedStream !== 'all' || selectedField !== 'all' || selectedDuration !== 'all'}
+          onReady={() => setIsGraphReady(true)}
         />
       ) : (
         <div className="w-full h-screen flex items-center justify-center">

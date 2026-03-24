@@ -16,6 +16,10 @@ if (!existsSync(DATA_DIR)) {
 const CAREERS_FILE = path.join(DATA_DIR, 'careers.json');
 const APPOINTMENTS_FILE = path.join(DATA_DIR, 'appointments.json');
 const VISITORS_FILE = path.join(DATA_DIR, 'visitors.json');
+const ASSETS_DIR = path.join(process.cwd(), 'public');
+if (!existsSync(ASSETS_DIR)) {
+  mkdirSync(ASSETS_DIR);
+}
 
 // In-memory fallback for Vercel/Read-only filesystems
 let memoryCareers: any[] = [];
@@ -107,6 +111,37 @@ const initializeData = async () => {
       const data = await fs.readFile(VISITORS_FILE, 'utf-8');
       memoryVisitors = data ? JSON.parse(data) : [];
       console.log("[Server] Loaded visitors from local file, count:", memoryVisitors.length);
+    }
+
+    // Load and restore assets (Logo & Favicon)
+    const [kvLogo, kvFavicon] = await Promise.all([
+      kv.get('asset_logo'),
+      kv.get('asset_favicon')
+    ]);
+
+    if (kvLogo) {
+      const logoBuffer = Buffer.from(kvLogo.data, 'base64');
+      const logoPath = path.join(ASSETS_DIR, 'logo.svg');
+      await fs.writeFile(logoPath, logoBuffer);
+      console.log("[Server] Restored logo.svg from Vercel KV");
+      
+      // Also try to update dist if in production
+      const distLogoPath = path.join(process.cwd(), 'dist', 'logo.svg');
+      if (existsSync(path.join(process.cwd(), 'dist'))) {
+        await fs.writeFile(distLogoPath, logoBuffer).catch(() => {});
+      }
+    }
+
+    if (kvFavicon) {
+      const faviconBuffer = Buffer.from(kvFavicon.data, 'base64');
+      const faviconPath = path.join(ASSETS_DIR, 'favicon.ico');
+      await fs.writeFile(faviconPath, faviconBuffer);
+      console.log("[Server] Restored favicon.ico from Vercel KV");
+      
+      const distFaviconPath = path.join(process.cwd(), 'dist', 'favicon.ico');
+      if (existsSync(path.join(process.cwd(), 'dist'))) {
+        await fs.writeFile(distFaviconPath, faviconBuffer).catch(() => {});
+      }
     }
     isInitialized = true;
     console.log("[Server] Data initialization complete");
@@ -249,6 +284,16 @@ const sendResultsEmail = async (data: any) => {
   }
 };
 
+// Helper to get client IP
+const getClientIp = (req: express.Request) => {
+  const ip = req.headers['x-forwarded-for'] || 
+             req.headers['x-real-ip'] || 
+             req.headers['cf-connecting-ip'] || 
+             req.socket.remoteAddress || 
+             'unknown';
+  return (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+};
+
 const app = express();
 const PORT = 3000;
 
@@ -261,7 +306,8 @@ app.use(async (_req, _res, next) => {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Visitor Tracking
 app.use(async (req, _res, next) => {
@@ -272,8 +318,7 @@ app.use(async (req, _res, next) => {
   const isStatic = req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i);
   
   if (isGet && !isApi && !isStatic) {
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+    const ipString = getClientIp(req);
     
     console.log(`[Visitor] Tracking request from IP: ${ipString} for path: ${req.path}`);
     
@@ -310,8 +355,7 @@ app.use(async (req, _res, next) => {
 
 // Track Visit (Manual call from frontend)
 app.post("/api/track-visit", (req, res) => {
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+  const ipString = getClientIp(req);
   
   console.log(`[Visitor] Manual tracking request from IP: ${ipString}`);
   
@@ -415,6 +459,49 @@ app.post("/api/careers", async (req, res) => {
   }
 });
 
+// Asset Upload API
+app.post("/api/upload-asset", async (req, res) => {
+  try {
+    const { type, data, mimeType } = req.body;
+    if (!type || !data) {
+      return res.status(400).json({ error: "Missing asset data" });
+    }
+
+    const buffer = Buffer.from(data, 'base64');
+    let fileName = '';
+    let kvKey = '';
+
+    if (type === 'logo') {
+      fileName = 'logo.svg';
+      kvKey = 'asset_logo';
+    } else if (type === 'favicon') {
+      fileName = 'favicon.ico';
+      kvKey = 'asset_favicon';
+    } else {
+      return res.status(400).json({ error: "Invalid asset type" });
+    }
+
+    // Save to public
+    const publicPath = path.join(ASSETS_DIR, fileName);
+    await fs.writeFile(publicPath, buffer);
+
+    // Save to dist (if exists)
+    const distPath = path.join(process.cwd(), 'dist', fileName);
+    if (existsSync(path.join(process.cwd(), 'dist'))) {
+      await fs.writeFile(distPath, buffer).catch(() => {});
+    }
+
+    // Save to KV for persistence
+    await kv.set(kvKey, { data, mimeType });
+
+    console.log(`[Asset] Updated ${fileName} and saved to KV`);
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("[Asset] Upload failed:", error);
+    res.status(500).json({ error: "Failed to upload asset" });
+  }
+});
+
 // Appointments API
 app.get("/api/appointments", async (_req, res) => {
   try {
@@ -438,8 +525,7 @@ app.post("/api/appointments", async (req, res) => {
       return res.status(400).json({ error: "Empty appointment data" });
     }
 
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+    const ipString = getClientIp(req);
 
     const id = 'appt-' + Date.now();
     const newAppointment = { ...appointmentData, id, ip: ipString, createdAt: new Date().toISOString() };

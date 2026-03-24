@@ -21,13 +21,16 @@ import {
   Map as MapIcon,
   RefreshCw,
   Download,
-  Globe
+  Globe,
+  Settings,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 const AdminPage: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'careers' | 'appointments' | 'visitors'>('careers');
+  const [activeTab, setActiveTab] = useState<'careers' | 'appointments' | 'visitors' | 'settings'>('careers');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -269,6 +272,12 @@ const AdminPage: React.FC = () => {
             >
               <Globe className="w-4 h-4" /> Visitor Logs
             </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'settings' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            >
+              <Settings className="w-4 h-4" /> Settings
+            </button>
           </nav>
         </div>
 
@@ -499,7 +508,7 @@ const AdminPage: React.FC = () => {
                 </table>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'visitors' ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
@@ -565,6 +574,104 @@ const AdminPage: React.FC = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8 max-w-4xl">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl">
+                    <ImageIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-display font-bold text-slate-900 dark:text-white">Website Assets</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Update your website's branding assets</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Logo Upload */}
+                  <div className="space-y-4">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Website Logo (SVG recommended)</label>
+                    <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-4 hover:border-indigo-500 transition-all group relative overflow-hidden">
+                      <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center overflow-hidden">
+                        <img src={`/logo.svg?t=${Date.now()}`} alt="Current Logo" className="w-full h-full object-contain p-2" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white mb-1">Upload new logo</p>
+                        <p className="text-[10px] text-slate-500">SVG, PNG or JPG (Max 2MB)</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setLoading(true);
+                            const success = await dataService.uploadAsset('logo', file);
+                            if (success) {
+                              setSuccess('Logo updated successfully! Refresh to see changes.');
+                              setTimeout(() => setSuccess(null), 3000);
+                            } else {
+                              setError('Failed to upload logo');
+                            }
+                            setLoading(false);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-indigo-600" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Favicon Upload */}
+                  <div className="space-y-4">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">Website Favicon (.ico or .svg)</label>
+                    <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-4 hover:border-indigo-500 transition-all group relative overflow-hidden">
+                      <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
+                        <img src={`/favicon.ico?t=${Date.now()}`} alt="Current Favicon" className="w-full h-full object-contain p-1" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white mb-1">Upload new favicon</p>
+                        <p className="text-[10px] text-slate-500">ICO or SVG (Max 512KB)</p>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept=".ico,.svg,image/x-icon,image/svg+xml"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setLoading(true);
+                            const success = await dataService.uploadAsset('favicon', file);
+                            if (success) {
+                              setSuccess('Favicon updated successfully! Refresh to see changes.');
+                              setTimeout(() => setSuccess(null), 3000);
+                            } else {
+                              setError('Failed to upload favicon');
+                            }
+                            setLoading(false);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-indigo-600" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-3xl p-6 flex items-start gap-4">
+                <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-1" />
+                <div>
+                  <h4 className="text-sm font-bold text-amber-900 dark:text-amber-50 mb-1">Note on Changes</h4>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                    Updating assets will overwrite the existing files. Due to browser caching, you might need to refresh the page or clear your cache to see the new logo and favicon immediately.
+                  </p>
+                </div>
               </div>
             </div>
           )}

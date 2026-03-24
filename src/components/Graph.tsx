@@ -8,9 +8,10 @@ interface GraphProps {
   data: CareerNode;
   onNodeClick: (node: CareerNode) => void;
   expandAll?: boolean;
+  onReady?: () => void;
 }
 
-const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) => {
+const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false, onReady }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const { theme } = useTheme();
 
@@ -181,10 +182,15 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick, expandAll = false }) =
     };
 
     update(hierarchy);
-
+    
     // Initial center
     const initialTransform = d3.zoomIdentity.translate(150, height / 2).scale(0.9);
     svg.transition().duration(750).call(zoom.transform, initialTransform);
+
+    // Call onReady after initial render
+    if (onReady) {
+      onReady();
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
