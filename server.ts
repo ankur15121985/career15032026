@@ -25,6 +25,8 @@ if (!existsSync(ASSETS_DIR)) {
 let memoryCareers: any[] = [];
 let memoryAppointments: any[] = [];
 let memoryVisitors: any[] = [];
+let memoryLogo: { data: string, mimeType: string } | null = null;
+let memoryFavicon: { data: string, mimeType: string } | null = null;
 
 // Vercel KV (Redis) Helper - No dependency version using fetch
 const kv = {
@@ -120,10 +122,15 @@ const initializeData = async () => {
     ]);
 
     if (kvLogo) {
+      memoryLogo = kvLogo;
       const logoBuffer = Buffer.from(kvLogo.data, 'base64');
       const logoPath = path.join(ASSETS_DIR, 'logo.svg');
-      await fs.writeFile(logoPath, logoBuffer);
-      console.log("[Server] Restored logo.svg from Vercel KV");
+      try {
+        await fs.writeFile(logoPath, logoBuffer);
+        console.log("[Server] Restored logo.svg from Vercel KV");
+      } catch (e) {
+        console.warn("[Server] Could not write logo.svg to filesystem (likely read-only)");
+      }
       
       // Also try to update dist if in production
       const distLogoPath = path.join(process.cwd(), 'dist', 'logo.svg');
@@ -133,10 +140,15 @@ const initializeData = async () => {
     }
 
     if (kvFavicon) {
+      memoryFavicon = kvFavicon;
       const faviconBuffer = Buffer.from(kvFavicon.data, 'base64');
       const faviconPath = path.join(ASSETS_DIR, 'favicon.ico');
-      await fs.writeFile(faviconPath, faviconBuffer);
-      console.log("[Server] Restored favicon.ico from Vercel KV");
+      try {
+        await fs.writeFile(faviconPath, faviconBuffer);
+        console.log("[Server] Restored favicon.ico from Vercel KV");
+      } catch (e) {
+        console.warn("[Server] Could not write favicon.ico to filesystem (likely read-only)");
+      }
       
       const distFaviconPath = path.join(process.cwd(), 'dist', 'favicon.ico');
       if (existsSync(path.join(process.cwd(), 'dist'))) {
@@ -286,12 +298,27 @@ const sendResultsEmail = async (data: any) => {
 
 // Helper to get client IP
 const getClientIp = (req: express.Request) => {
-  const ip = req.headers['x-forwarded-for'] || 
-             req.headers['x-real-ip'] || 
-             req.headers['cf-connecting-ip'] || 
-             req.socket.remoteAddress || 
-             'unknown';
-  return (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+  const forwarded = req.headers['x-forwarded-for'];
+  const realIp = req.headers['x-real-ip'];
+  const cfIp = req.headers['cf-connecting-ip'];
+  
+  let ip = forwarded || realIp || cfIp || req.socket.remoteAddress || 'unknown';
+  
+  if (Array.isArray(ip)) {
+    ip = ip[0];
+  }
+  
+  // Handle comma separated list from proxies
+  if (typeof ip === 'string' && ip.includes(',')) {
+    ip = ip.split(',')[0].trim();
+  }
+  
+  // Clean up IPv6 prefix if present
+  if (typeof ip === 'string' && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+  
+  return ip;
 };
 
 const app = express();
@@ -389,6 +416,25 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Dynamic Asset Serving (to bypass Vercel static file read-only filesystem)
+app.get("/logo.svg", (_req, res, next) => {
+  if (memoryLogo) {
+    res.setHeader('Content-Type', memoryLogo.mimeType || 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    return res.send(Buffer.from(memoryLogo.data, 'base64'));
+  }
+  next();
+});
+
+app.get("/favicon.ico", (_req, res, next) => {
+  if (memoryFavicon) {
+    res.setHeader('Content-Type', memoryFavicon.mimeType || 'image/x-icon');
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    return res.send(Buffer.from(memoryFavicon.data, 'base64'));
+  }
+  next();
+});
+
 // Visitor Count
 app.get("/api/visitor-count", (_req, res) => {
   res.json({ 
@@ -481,9 +527,20 @@ app.post("/api/upload-asset", async (req, res) => {
       return res.status(400).json({ error: "Invalid asset type" });
     }
 
+    // Save to memory for immediate serving
+    if (type === 'logo') {
+      memoryLogo = { data, mimeType };
+    } else if (type === 'favicon') {
+      memoryFavicon = { data, mimeType };
+    }
+
     // Save to public
     const publicPath = path.join(ASSETS_DIR, fileName);
-    await fs.writeFile(publicPath, buffer);
+    try {
+      await fs.writeFile(publicPath, buffer);
+    } catch (e) {
+      console.warn(`[Asset] Could not write ${fileName} to public (likely read-only)`);
+    }
 
     // Save to dist (if exists)
     const distPath = path.join(process.cwd(), 'dist', fileName);
@@ -527,8 +584,8 @@ app.post("/api/appointments", async (req, res) => {
 
     const ipString = getClientIp(req);
 
-    const id = 'appt-' + Date.now();
-    const newAppointment = { ...appointmentData, id, ip: ipString, createdAt: new Date().toISOString() };
+    const id = appointmentData.id || 'appt-' + Date.now();
+    const newAppointment = { ...appointmentData, id, ip: ipString, createdAt: appointmentData.createdAt || new Date().toISOString() };
     
     memoryAppointments.push(newAppointment);
     
@@ -547,7 +604,7 @@ app.post("/api/appointments", async (req, res) => {
       console.error("[API] Appointment email failed:", err);
     }
     
-    res.json({ success: true, id });
+    res.json({ success: true, appointment: newAppointment });
   } catch (error: any) {
     console.error("[API] POST /api/appointments Failed:", error);
     res.status(500).json({ error: "Failed to book appointment" });

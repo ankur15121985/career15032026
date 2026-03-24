@@ -91,24 +91,35 @@ export const dataService = {
 
   saveAppointment: async (appointment: any): Promise<boolean> => {
     try {
+      // Generate ID on client to keep local storage consistent
+      const id = appointment.id || 'appt-' + Date.now();
+      const createdAt = appointment.createdAt || new Date().toISOString();
+      const newAppointment = { ...appointment, id, createdAt };
+      
       // Save to localStorage
       const stored = localStorage.getItem(APPOINTMENTS_KEY);
       const appointments = stored ? JSON.parse(stored) : [];
-      const newAppointment = { 
-        ...appointment, 
-        id: appointment.id || 'appt-' + Date.now(),
-        createdAt: appointment.createdAt || new Date().toISOString()
-      };
       appointments.push(newAppointment);
       localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(appointments));
       
       // Try to save to API (optional)
       try {
-        await fetch('/api/appointments', {
+        const res = await fetch('/api/appointments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newAppointment)
         });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.appointment) {
+            // Update local storage with the server's version (which has the IP)
+            const latestStored = localStorage.getItem(APPOINTMENTS_KEY);
+            const latestAppts = latestStored ? JSON.parse(latestStored) : [];
+            const updatedAppts = latestAppts.map((a: any) => a.id === id ? data.appointment : a);
+            localStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updatedAppts));
+          }
+        }
       } catch (e) {
         console.warn("[DataService] API save failed, but saved to local storage");
       }
