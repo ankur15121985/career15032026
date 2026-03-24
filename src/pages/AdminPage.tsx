@@ -429,6 +429,8 @@ const AdminPage: React.FC = () => {
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">User Details</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Consultant / Time</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Recommendation</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">IP Address</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Scores (IQ/AQ)</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -463,6 +465,15 @@ const AdminPage: React.FC = () => {
                               <GraduationCap className="w-3 h-3" /> {appt.top_recommendation || 'General'}
                             </div>
                           </td>
+                          <td className="px-6 py-4">
+                            <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">{appt.ip || 'N/A'}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                              <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400">IQ: {appt.iq_score ?? 'N/A'}%</div>
+                              <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">AQ: {appt.aq_score ?? 'N/A'}%</div>
+                            </div>
+                          </td>
                           <td className="px-6 py-4 text-right">
                             <button 
                               onClick={() => handleDeleteAppointment(appt.id)}
@@ -475,7 +486,7 @@ const AdminPage: React.FC = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="px-6 py-20 text-center">
+                        <td colSpan={6} className="px-6 py-20 text-center">
                           <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Calendar className="w-6 h-6 text-slate-400" />
                           </div>

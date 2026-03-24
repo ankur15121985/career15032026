@@ -253,7 +253,7 @@ const app = express();
 const PORT = 3000;
 
 // Middleware to ensure data is initialized before handling requests
-app.use(async (req, _res, next) => {
+app.use(async (_req, _res, next) => {
   if (!isInitialized && initializationPromise) {
     await initializationPromise;
   }
@@ -438,8 +438,11 @@ app.post("/api/appointments", async (req, res) => {
       return res.status(400).json({ error: "Empty appointment data" });
     }
 
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ipString = (Array.isArray(ip) ? ip[0] : ip).split(',')[0].trim();
+
     const id = 'appt-' + Date.now();
-    const newAppointment = { ...appointmentData, id, createdAt: new Date().toISOString() };
+    const newAppointment = { ...appointmentData, id, ip: ipString, createdAt: new Date().toISOString() };
     
     memoryAppointments.push(newAppointment);
     
