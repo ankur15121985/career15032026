@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { Helmet } from 'react-helmet-async';
 import { Trophy, Sparkles, ArrowRight, Map, GraduationCap, BarChart3, Calendar, User, X, Clock, ExternalLink, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { COLLEGES } from '../data/colleges';
@@ -158,6 +159,10 @@ const Result: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-20 px-6 transition-colors duration-300">
+      <Helmet>
+        <title>Your Career Assessment Results: Personalized Path by CareerSirji</title>
+        <meta name="description" content="View your IQ and AQ scores and discover your top recommended career paths. Get a personalized consultation with Vineet Bansal to plan your future success." />
+      </Helmet>
       <div className="max-w-5xl mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}

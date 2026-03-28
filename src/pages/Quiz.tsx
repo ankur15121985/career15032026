@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { User, Mail, Phone, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { QUESTIONS, Question } from '../data/questions';
 
@@ -73,6 +74,10 @@ const Quiz: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 transition-colors duration-300">
+      <Helmet>
+        <title>Career Assessment Quiz: Discover Your IQ and AQ with CareerSirji</title>
+        <meta name="description" content="Take our scientific career assessment quiz to measure your IQ and AQ. Get personalized career suggestions based on your strengths and situational adaptability." />
+      </Helmet>
       <AnimatePresence mode="wait">
         {step === 'contact' ? (
           <motion.div

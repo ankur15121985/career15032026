@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
 import Graph from '../components/Graph';
 import SidePanel from '../components/SidePanel';
 import { CareerNode } from '../types';
@@ -168,6 +169,10 @@ const GraphPage: React.FC = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <Helmet>
+        <title>Interactive Career Map: Explore 1000+ Career Paths with CareerSirji</title>
+        <meta name="description" content="Use our interactive career map to visualize and explore over 1000 career paths. Discover streams, specializations, and educational requirements in real-time." />
+      </Helmet>
       <AnimatePresence>
         {showLoader && (
           <motion.div 

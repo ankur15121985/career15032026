@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import GraphPage from './pages/GraphPage';
@@ -16,19 +17,21 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="graph" element={<GraphPage />} />
-            <Route path="quiz" element={<Quiz />} />
-            <Route path="result" element={<Result />} />
-            <Route path="admin" element={<AdminPage />} />
-          </Route>
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <HelmetProvider>
+      <ThemeProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="graph" element={<GraphPage />} />
+              <Route path="quiz" element={<Quiz />} />
+              <Route path="result" element={<Result />} />
+              <Route path="admin" element={<AdminPage />} />
+            </Route>
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </HelmetProvider>
   );
 };
 

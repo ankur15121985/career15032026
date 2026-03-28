@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Compass, Target, GraduationCap, ArrowRight, Users, Map as MapIcon, BarChart3, User } from 'lucide-react';
 
 const Home: React.FC = () => {
@@ -29,6 +30,14 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      <Helmet>
+        <title>Career Counseling & Guidance: Navigate Your Path with CareerSirji</title>
+        <meta name="description" content="Discover your ideal career with CareerSirji. Explore 1000+ paths, take scientific assessments, and get expert guidance from Vineet Bansal to secure your future." />
+        <meta property="og:title" content="Career Counseling & Guidance: Navigate Your Path with CareerSirji" />
+        <meta property="og:description" content="Discover your ideal career with CareerSirji. Explore 1000+ paths, take scientific assessments, and get expert guidance from Vineet Bansal to secure your future." />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Helmet>
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black text-white">
         {/* Massive Background Typography (Recipe 2) */}

@@ -435,6 +435,30 @@ app.get("/favicon.ico", (_req, res, next) => {
   next();
 });
 
+// Sitemap.xml Generator
+app.get("/sitemap.xml", (_req, res) => {
+  const baseUrl = process.env.APP_URL || "https://careersirji.com";
+  const pages = [
+    { url: "/", priority: "1.0", changefreq: "daily" },
+    { url: "/graph", priority: "0.9", changefreq: "weekly" },
+    { url: "/quiz", priority: "0.8", changefreq: "monthly" },
+    { url: "/result", priority: "0.7", changefreq: "monthly" },
+  ];
+
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${pages.map(page => `  <url>
+    <loc>${baseUrl}${page.url}</loc>
+    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+
+  res.header('Content-Type', 'application/xml');
+  res.send(sitemap);
+});
+
 // Visitor Count
 app.get("/api/visitor-count", (_req, res) => {
   res.json({ 
